@@ -3,3 +3,4 @@
 .git
 .kilo
 backend/node_modules
+backend/out/
