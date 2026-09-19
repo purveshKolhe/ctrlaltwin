@@ -4,3 +4,10 @@
 .kilo
 backend/node_modules
 backend/out/
+.env.*.local
+!.env.example
+node_modules/
+dist/
+coverage/
+cdk.out/
+.DS_Store
