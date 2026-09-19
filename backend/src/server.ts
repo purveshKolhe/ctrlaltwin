@@ -8,10 +8,12 @@ import { fileURLToPath } from 'url';
 import { GenerationJob, PresentationPipeline } from './pipeline';
 import { THEMES } from './remotion/themes';
 
-dotenv.config();
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Load environment variables from backend/.env and root .env
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 4000;

@@ -1,5 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import fs from 'fs';
+import Groq from 'groq-sdk';
+import { PDFParse } from 'pdf-parse';
 import { PresentationManifest, PresentationManifestSchema } from '../types/presentation';
 
 export interface ScriptGenerationOptions {
@@ -127,15 +129,74 @@ export class MockLLMProvider implements ILLMProvider {
 }
 
 /**
- * GeminiProvider: Uses Google AI Studio (Gemini 2.5 Flash / 1.5 Flash)
- * with multimodal capabilities, reading both text prompts and visual PDF documents directly.
+ * Sanitizes and normalizes LLM outputs so slight deviations (missing titles on quote slides,
+ * object chartData vs array) are corrected before strict schema validation.
  */
-export class GeminiProvider implements ILLMProvider {
-  private ai: GoogleGenAI;
+function normalizeManifest(raw: any, presId: string, templateId: string): any {
+  const manifest = { ...raw };
+  manifest.id = manifest.id || presId;
+  manifest.templateId = manifest.templateId || templateId;
+  manifest.fps = manifest.fps || 30;
+  manifest.width = manifest.width || 1920;
+  manifest.height = manifest.height || 1080;
+  manifest.topic = manifest.topic || manifest.title || 'Presentation';
+  manifest.title = manifest.title || manifest.topic || 'Presentation';
+
+  if (!Array.isArray(manifest.slides)) {
+    manifest.slides = [];
+  }
+
+  manifest.slides = manifest.slides.map((slide: any, idx: number) => {
+    const s = { ...slide };
+    s.id = s.id || `${presId}-slide-${idx + 1}`;
+
+    const validTypes = ['title', 'bullet-list', 'stat-chart', 'image-content', 'quote'];
+    s.type = validTypes.includes(s.type) ? s.type : (idx === 0 ? 'title' : 'bullet-list');
+
+    s.visual = s.visual || {};
+    s.visual.title = s.visual.title || s.visual.quote || s.visual.subtitle || `Key Insights ${idx + 1}`;
+
+    // Normalize chartData: if object, convert to array
+    if (s.visual.chartData && typeof s.visual.chartData === 'object' && !Array.isArray(s.visual.chartData)) {
+      s.visual.chartData = Object.entries(s.visual.chartData).map(([label, value]) => ({
+        label,
+        value: typeof value === 'number' ? value : Number(value) || 0,
+      }));
+    }
+
+    // Normalize metrics: if object, convert to array
+    if (s.visual.metrics && typeof s.visual.metrics === 'object' && !Array.isArray(s.visual.metrics)) {
+      s.visual.metrics = Object.entries(s.visual.metrics).map(([label, value]) => ({
+        label,
+        value: String(value),
+      }));
+    }
+
+    s.narration = s.narration || {};
+    s.narration.script =
+      s.narration.script ||
+      s.visual.subtitle ||
+      s.visual.title ||
+      'In this section, we review the key findings.';
+
+    return s;
+  });
+
+  return manifest;
+}
+
+/**
+ * GroqProvider: Uses Groq Cloud with fast inference models like qwen/qwen3.8-27b.
+ */
+export class GroqProvider implements ILLMProvider {
+  private groq: Groq;
   private model: string;
 
-  constructor(apiKey: string, model: string = 'gemini-2.5-flash') {
-    this.ai = new GoogleGenAI({ apiKey });
+  constructor(
+    apiKey: string,
+    model: string = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b'
+  ) {
+    this.groq = new Groq({ apiKey });
     this.model = model;
   }
 
@@ -147,27 +208,39 @@ export class GeminiProvider implements ILLMProvider {
     const targetSlideCount = options?.targetSlideCount || 5;
     const presId = `pres-${Date.now()}`;
 
+    let userContent = `Topic / Request: ${prompt || 'Create presentation from attached content'}\nTarget slide count: ~${targetSlideCount} slides.`;
+
+    // If PDF is attached, parse its text and structure
+    if (options?.pdfPath && fs.existsSync(options.pdfPath)) {
+      try {
+        const pdfBuffer = fs.readFileSync(options.pdfPath);
+        const parser = new PDFParse(new Uint8Array(pdfBuffer));
+        const parsed = await parser.getText();
+        const extractedText = parsed.text?.trim() || '';
+        userContent += `\n\n--- EXTRACTED CONTENT FROM ATTACHED PDF DOCUMENT ---\n${extractedText.slice(0, 35000)}\n--- END OF ATTACHED DOCUMENT ---`;
+      } catch (err) {
+        console.warn('[GroqProvider] Could not extract text from PDF:', err);
+      }
+    }
+
     const systemPrompt = `You are an expert presentation designer and video director.
-Your task is to transform the user's input (and any attached PDF document) into a structured presentation video script.
+Your task is to transform the user's input (and any attached document content) into a concise, high-impact presentation video script.
 
 IMPORTANT GUIDELINES:
-1. SEPARATION OF CONCERNS:
-   - visual: Contains crisp, concise, high-impact titles, subtitles, bullet points, charts, or quotes.
-   - narration.script: Contains natural, conversational spoken prose for a voiceover actor / TTS engine.
-   - If a slide visual contains equations (e.g. E = mc^2) or symbols, the narration.script MUST spell them out phonetically (e.g., "E equals m c squared"). Do not put raw mathematical formulas or symbols in narration.script.
+1. CONCISENESS (CRITICAL FOR TOKEN LIMITS):
+   - Create exactly 4 slides total:
+     Slide 1: 'title'
+     Slide 2: 'bullet-list' (3 concise bullets, under 8 words each)
+     Slide 3: 'stat-chart' (2-3 metrics or chartData items)
+     Slide 4: 'quote' or 'image-content'
+   - Visual text: brief, punchy phrases.
+   - Narration script: exactly 1 to 2 spoken sentences per slide. Do not write long paragraphs.
 
-2. SLIDE TYPES TO USE:
-   - 'title': Opening slide with title, subtitle, and badge.
-   - 'bullet-list': 3-4 bullet takeaways.
-   - 'stat-chart': Visual metrics or bar chart comparisons (specify chartData or metrics).
-   - 'image-content': Explains a visual diagram or concept, with an imagePrompt describing the scene.
-   - 'quote': Memorable takeaway or conclusion quote with author.
+2. SEPARATION OF CONCERNS:
+   - visual: On-screen titles, bullets, metrics, or charts.
+   - narration.script: Natural, conversational spoken prose for a voiceover actor. If visual contains equations or symbols, spell them out phonetically (e.g., "E equals m c squared").
 
-3. PDF VISUAL UNDERSTANDING:
-   - If a PDF is attached, analyze it VISUALLY (charts, diagrams, figures, layout, tables, key findings) as well as its text.
-   - Extract key insights, statistics, and conclusions from the PDF into appropriate visual slides.
-
-Return ONLY a valid JSON object with this exact structure:
+Return ONLY a valid JSON object matching this structure (no markdown formatting):
 {
   "id": "${presId}",
   "topic": "topic summary",
@@ -190,13 +263,79 @@ Return ONLY a valid JSON object with this exact structure:
         "script": "spoken voiceover text..."
       }
     }
-    // ... between 4 and ${targetSlideCount} slides
   ]
 }`;
 
+    const maxTokens = Number(process.env.GROQ_MAX_TOKENS) || 950;
+
+    const completion = await this.groq.chat.completions.create({
+      model: this.model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ],
+      response_format: { type: 'json_object' },
+      max_tokens: maxTokens,
+      temperature: 0.4,
+    });
+
+    const content = completion.choices[0]?.message?.content?.trim() || '{}';
+    let parsed: any;
+    try {
+      parsed = JSON.parse(content);
+    } catch (err) {
+      console.error('Failed to parse Groq response as JSON:', content);
+      throw new Error('Groq did not return valid JSON');
+    }
+
+    const normalized = normalizeManifest(parsed, presId, templateId);
+    return PresentationManifestSchema.parse(normalized);
+  }
+}
+
+/**
+ * GeminiProvider: Uses Google AI Studio (Gemini 2.5 Flash / 1.5 Flash)
+ */
+export class GeminiProvider implements ILLMProvider {
+  private ai: GoogleGenAI;
+  private model: string;
+
+  constructor(
+    apiKey: string,
+    model: string = process.env.GEMINI_MODEL || 'gemini-3.6-flash'
+  ) {
+    this.ai = new GoogleGenAI({ apiKey });
+    this.model = model;
+  }
+
+  async generatePresentationScript(
+    prompt: string,
+    options?: ScriptGenerationOptions
+  ): Promise<PresentationManifest> {
+    const templateId = options?.templateId || 'tech-modern-dark';
+    const targetSlideCount = options?.targetSlideCount || 5;
+    const presId = `pres-${Date.now()}`;
+
+    const systemPrompt = `You are an expert presentation designer and video director.
+Your task is to transform the user's input (and any attached PDF document) into a structured presentation video script.
+
+IMPORTANT GUIDELINES:
+1. SEPARATION OF CONCERNS:
+   - visual: Contains crisp, concise, high-impact titles, subtitles, bullet points, charts, or quotes.
+   - narration.script: Contains natural, conversational spoken prose for a voiceover actor / TTS engine.
+   - If a slide visual contains equations (e.g. E = mc^2) or symbols, the narration.script MUST spell them out phonetically.
+
+2. SLIDE TYPES TO USE:
+   - 'title': Opening slide with title, subtitle, and badge.
+   - 'bullet-list': 3-4 bullet takeaways.
+   - 'stat-chart': Visual metrics or bar chart comparisons (specify chartData or metrics).
+   - 'image-content': Explains a visual diagram or concept, with an imagePrompt.
+   - 'quote': Memorable takeaway or conclusion quote with author.
+
+Return ONLY a valid JSON object matching the PresentationManifest structure.`;
+
     const contents: any[] = [];
 
-    // If PDF is provided, attach it as visual inlineData for Gemini
     if (options?.pdfPath && fs.existsSync(options.pdfPath)) {
       const pdfBuffer = fs.readFileSync(options.pdfPath);
       contents.push({
@@ -206,7 +345,7 @@ Return ONLY a valid JSON object with this exact structure:
         },
       });
       contents.push({
-        text: `Analyze the attached PDF visually and textually. Based on its content, generate a presentation video script following the requested structure. User additional notes: ${prompt || 'Summarize key insights'}`,
+        text: `Analyze the attached PDF visually and textually. Generate a presentation video script with ~${targetSlideCount} slides. User notes: ${prompt || 'Summarize key insights'}`,
       });
     } else {
       contents.push({
@@ -232,11 +371,8 @@ Return ONLY a valid JSON object with this exact structure:
       throw new Error('Gemini did not return valid JSON');
     }
 
-    // Ensure id and templateId
-    parsed.id = parsed.id || presId;
-    parsed.templateId = parsed.templateId || templateId;
-
-    return PresentationManifestSchema.parse(parsed);
+    const normalized = normalizeManifest(parsed, presId, templateId);
+    return PresentationManifestSchema.parse(normalized);
   }
 }
 
@@ -244,16 +380,29 @@ Return ONLY a valid JSON object with this exact structure:
  * Factory function to retrieve the configured LLM provider
  */
 export function getLLMProvider(): ILLMProvider {
-  const providerType = process.env.LLM_PROVIDER || 'gemini';
+  const providerType = process.env.LLM_PROVIDER || 'groq';
+  const groqApiKey = process.env.GROQ_API_KEY;
   const geminiApiKey = process.env.GEMINI_API_KEY;
 
-  if (providerType === 'gemini' && geminiApiKey && geminiApiKey.trim().length > 0) {
-    return new GeminiProvider(geminiApiKey.trim());
+  // 1. Groq Cloud (Qwen 3.8 27B)
+  if (
+    (providerType === 'groq' || groqApiKey) &&
+    groqApiKey &&
+    groqApiKey.trim().length > 0
+  ) {
+    const model = process.env.GROQ_MODEL || 'qwen/qwen3.8-27b';
+    return new GroqProvider(groqApiKey.trim(), model);
   }
 
-  if (providerType === 'gemini') {
+  // 2. Google AI Studio (Gemini)
+  if (providerType === 'gemini' && geminiApiKey && geminiApiKey.trim().length > 0) {
+    const model = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+    return new GeminiProvider(geminiApiKey.trim(), model);
+  }
+
+  if (providerType === 'groq') {
     console.warn(
-      '[LLM Provider] GEMINI_API_KEY is not set in .env. Falling back to MockLLMProvider for offline testing.'
+      '[LLM Provider] GROQ_API_KEY is not set in .env. Falling back to MockLLMProvider for offline testing.'
     );
   }
 
