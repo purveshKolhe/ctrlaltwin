@@ -1,5 +1,8 @@
 .env
 .env.local
+.git
+.kilo
+backend/node_modules
 .env.*.local
 !.env.example
 node_modules/
