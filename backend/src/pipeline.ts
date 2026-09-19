@@ -1,17 +1,25 @@
 import path from 'path';
-import { ImageAgent } from './agents/image.agent.js';
-import { OrchestratorAgent } from './agents/orchestrator.agent.js';
-import { VoiceoverAgent } from './agents/voiceover.agent.js';
-import { RenderService } from './services/render.service.js';
-import { SyncService } from './services/sync.service.js';
-import { PresentationManifest } from './types/presentation.js';
+import { ImageAgent } from './agents/image.agent';
+import { OrchestratorAgent } from './agents/orchestrator.agent';
+import { VoiceoverAgent } from './agents/voiceover.agent';
+import { RenderService } from './services/render.service';
+import { SyncService } from './services/sync.service';
+import { PresentationManifest } from './types/presentation';
 
 export interface GenerationJob {
   id: string;
   prompt: string;
-  status: 'pending' | 'orchestrating' | 'generating_assets' | 'syncing' | 'rendering' | 'completed' | 'failed';
-  progress: number;
+  pdfPath?: string;
   templateId?: string;
+  status:
+    | 'pending'
+    | 'orchestrating'
+    | 'generating_assets'
+    | 'syncing'
+    | 'rendering'
+    | 'completed'
+    | 'failed';
+  progress: number;
   manifest?: PresentationManifest;
   videoPath?: string;
   error?: string;
@@ -50,13 +58,14 @@ export class PresentationPipeline {
     };
 
     try {
-      // Step 1: Orchestrator generates presentation script
+      // Step 1: Orchestrator generates presentation script (multimodal with PDF if provided)
       update({ status: 'orchestrating', progress: 10 });
       let manifest = await this.orchestrator.generatePresentation(job.prompt, {
         templateId: job.templateId,
+        pdfPath: job.pdfPath,
       });
 
-      // Step 2: Voiceover & TTS generation
+      // Step 2: Voiceover & TTS generation (Edge TTS or mock)
       update({ status: 'generating_assets', progress: 30 });
       manifest = await this.voiceoverAgent.processVoiceovers(manifest, workDir);
 

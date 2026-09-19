@@ -2,10 +2,11 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import express, { Request, Response } from 'express';
 import fs from 'fs';
+import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GenerationJob, PresentationPipeline } from './pipeline.js';
-import { THEMES } from './remotion/themes.js';
+import { GenerationJob, PresentationPipeline } from './pipeline';
+import { THEMES } from './remotion/themes';
 
 dotenv.config();
 
@@ -15,9 +16,30 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 4000;
 const WORK_DIR = path.resolve(__dirname, '../out');
+const UPLOADS_DIR = path.resolve(__dirname, '../out/uploads');
+const PUBLIC_DIR = path.resolve(__dirname, '../public');
+
+fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(PUBLIC_DIR));
+
+// Configure multer for PDF uploads
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${uniqueSuffix}-${file.originalname}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 30 * 1024 * 1024 }, // 30MB PDF limit
+});
 
 // In-memory job repository
 const jobs = new Map<string, GenerationJob>();
@@ -40,44 +62,57 @@ app.get('/api/templates', (_req: Request, res: Response) => {
   });
 });
 
-// Create and trigger a presentation generation job
-app.post('/api/presentations', async (req: Request, res: Response) => {
-  try {
-    const { prompt, templateId } = req.body;
+// Create and trigger a presentation generation job (supports JSON or multipart with PDF)
+app.post(
+  '/api/presentations',
+  upload.single('pdf'),
+  async (req: Request, res: Response) => {
+    try {
+      const prompt = req.body?.prompt || '';
+      const templateId = req.body?.templateId || 'tech-modern-dark';
+      const pdfPath = req.file ? req.file.path : undefined;
 
-    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
-      return res.status(400).json({ error: 'A valid prompt string is required.' });
+      if (!prompt.trim() && !pdfPath) {
+        return res
+          .status(400)
+          .json({ error: 'Please provide either a prompt or a PDF document.' });
+      }
+
+      const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      const job: GenerationJob = {
+        id: jobId,
+        prompt: prompt.trim(),
+        pdfPath,
+        templateId,
+        status: 'pending',
+        progress: 0,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      jobs.set(jobId, job);
+
+      // Launch pipeline asynchronously
+      pipeline
+        .execute(job, WORK_DIR, (updated) => {
+          jobs.set(jobId, { ...updated });
+        })
+        .catch((err) => {
+          console.error(`[Job ${jobId}] Failed:`, err);
+        });
+
+      res.status(202).json({
+        message: 'Presentation generation started',
+        jobId,
+        status: job.status,
+      });
+    } catch (err: any) {
+      res
+        .status(500)
+        .json({ error: err?.message || 'Failed to start presentation job' });
     }
-
-    const jobId = `job-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-    const job: GenerationJob = {
-      id: jobId,
-      prompt: prompt.trim(),
-      templateId: templateId || 'tech-modern-dark',
-      status: 'pending',
-      progress: 0,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    jobs.set(jobId, job);
-
-    // Launch pipeline execution asynchronously in background
-    pipeline.execute(job, WORK_DIR, (updated) => {
-      jobs.set(jobId, { ...updated });
-    }).catch((err) => {
-      console.error(`[Job ${jobId}] Failed:`, err);
-    });
-
-    res.status(202).json({
-      message: 'Presentation generation started',
-      jobId,
-      status: job.status,
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: err?.message || 'Failed to start presentation job' });
   }
-});
+);
 
 // Get job status and details
 app.get('/api/presentations/:id', (req: Request, res: Response) => {

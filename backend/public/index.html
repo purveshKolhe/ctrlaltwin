@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presenter Video Generator</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    h1 { margin-bottom: 8px; color: #38bdf8; }
+    p.sub { color: #94a3b8; margin-top: 0; margin-bottom: 28px; }
+    .card {
+      background: #1e293b;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      margin-bottom: 24px;
+    }
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+    }
+    textarea, select, input[type="file"] {
+      width: 100%;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid #475569;
+      background: #0f172a;
+      color: #f8fafc;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+      font-size: 15px;
+    }
+    button {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    button:hover { background: #0369a1; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    .progress-box {
+      display: none;
+      margin-top: 20px;
+    }
+    .progress-bar-bg {
+      background: #334155;
+      height: 16px;
+      border-radius: 8px;
+      overflow: hidden;
+      margin: 12px 0;
+    }
+    .progress-bar-fill {
+      background: #38bdf8;
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .status-text {
+      font-weight: 600;
+      color: #38bdf8;
+    }
+    video {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 16px;
+      background: #000;
+    }
+    .download-btn {
+      display: inline-block;
+      text-align: center;
+      background: #10b981;
+      color: white;
+      text-decoration: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-weight: 600;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Presenter Video Generator</h1>
+  <p class="sub">Enter a topic prompt or upload a visual PDF to generate an animated video with voiceover.</p>
+
+  <div class="card">
+    <label for="prompt">Topic / Instructions</label>
+    <textarea id="prompt" rows="3" placeholder="e.g. Overview of Quantum Computing architectures and comparison with classical bits"></textarea>
+
+    <label for="pdf">Attach Visual PDF (Optional - Gemini reads visually)</label>
+    <input type="file" id="pdf" accept="application/pdf">
+
+    <label for="template">Template Theme</label>
+    <select id="template">
+      <option value="tech-modern-dark">Tech Modern Dark</option>
+      <option value="corporate-clean">Corporate Clean</option>
+      <option value="cyber-gradient">Cyber Gradient</option>
+    </select>
+
+    <button id="submitBtn" onclick="generatePresentation()">Generate Presentation Video</button>
+
+    <div class="progress-box" id="progressBox">
+      <div style="display: flex; justify-content: space-between;">
+        <span class="status-text" id="statusText">Starting pipeline...</span>
+        <span id="percentText">0%</span>
+      </div>
+      <div class="progress-bar-bg">
+        <div class="progress-bar-fill" id="progressFill"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" style="display: none;">
+    <h3>Generated Presenter Video</h3>
+    <video id="videoPlayer" controls></video>
+    <a id="downloadBtn" class="download-btn" href="#" download>Download MP4 Video</a>
+  </div>
+
+  <script>
+    let pollInterval = null;
+
+    async function generatePresentation() {
+      const prompt = document.getElementById('prompt').value.trim();
+      const pdfInput = document.getElementById('pdf');
+      const template = document.getElementById('template').value;
+      const submitBtn = document.getElementById('submitBtn');
+      const progressBox = document.getElementById('progressBox');
+      const resultCard = document.getElementById('resultCard');
+
+      if (!prompt && (!pdfInput.files || pdfInput.files.length === 0)) {
+        alert('Please enter a prompt or select a PDF file.');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      progressBox.style.display = 'block';
+      resultCard.style.display = 'none';
+
+      const formData = new FormData();
+      if (prompt) formData.append('prompt', prompt);
+      if (template) formData.append('templateId', template);
+      if (pdfInput.files && pdfInput.files.length > 0) {
+        formData.append('pdf', pdfInput.files[0]);
+      }
+
+      try {
+        const res = await fetch('/api/presentations', {
+          method: 'POST',
+          body: formData,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to start generation');
+
+        pollJob(data.jobId);
+      } catch (err) {
+        alert(err.message);
+        submitBtn.disabled = false;
+        progressBox.style.display = 'none';
+      }
+    }
+
+    function pollJob(jobId) {
+      const statusText = document.getElementById('statusText');
+      const percentText = document.getElementById('percentText');
+      const progressFill = document.getElementById('progressFill');
+      const submitBtn = document.getElementById('submitBtn');
+      const resultCard = document.getElementById('resultCard');
+      const videoPlayer = document.getElementById('videoPlayer');
+      const downloadBtn = document.getElementById('downloadBtn');
+
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/presentations/${jobId}`);
+          const job = await res.json();
+
+          const stages = {
+            'pending': 'Queued...',
+            'orchestrating': 'Analyzing content & creating slides...',
+            'generating_assets': 'Generating voiceovers & visuals...',
+            'syncing': 'Synchronizing audio-video timeline...',
+            'rendering': 'Rendering final video with Remotion...',
+            'completed': 'Rendering Complete!',
+            'failed': 'Failed: ' + (job.error || 'Unknown error'),
+          };
+
+          statusText.textContent = stages[job.status] || job.status;
+          percentText.textContent = `${job.progress}%`;
+          progressFill.style.width = `${job.progress}%`;
+
+          if (job.status === 'completed') {
+            clearInterval(pollInterval);
+            submitBtn.disabled = false;
+            resultCard.style.display = 'block';
+            videoPlayer.src = `/api/presentations/${jobId}/video`;
+            downloadBtn.href = `/api/presentations/${jobId}/video`;
+          } else if (job.status === 'failed') {
+            clearInterval(pollInterval);
+            submitBtn.disabled = false;
+            alert(`Generation failed: ${job.error}`);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }, 1500);
+    }
+  </script>
+
+</body>
+</html>

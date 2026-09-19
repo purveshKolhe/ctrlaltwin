@@ -1,8 +1,11 @@
-import { PresentationManifest, PresentationManifestSchema } from '../types/presentation.js';
+import { GoogleGenAI } from '@google/genai';
+import fs from 'fs';
+import { PresentationManifest, PresentationManifestSchema } from '../types/presentation';
 
 export interface ScriptGenerationOptions {
   templateId?: string;
   targetSlideCount?: number;
+  pdfPath?: string;
 }
 
 export interface ILLMProvider {
@@ -22,7 +25,7 @@ export class MockLLMProvider implements ILLMProvider {
     options?: ScriptGenerationOptions
   ): Promise<PresentationManifest> {
     const templateId = options?.templateId || 'tech-modern-dark';
-    const cleanPrompt = prompt.trim();
+    const cleanPrompt = prompt.trim() || 'Visual Presentation Analysis';
     const id = `pres-${Date.now()}`;
 
     const manifest: PresentationManifest = {
@@ -33,7 +36,7 @@ export class MockLLMProvider implements ILLMProvider {
       fps: 30,
       width: 1920,
       height: 1080,
-      totalDurationInFrames: 0, // Will be computed dynamically by SyncService
+      totalDurationInFrames: 0,
       slides: [
         {
           id: `${id}-slide-1`,
@@ -119,8 +122,121 @@ export class MockLLMProvider implements ILLMProvider {
       ],
     };
 
-    // Validate against Zod schema
     return PresentationManifestSchema.parse(manifest);
+  }
+}
+
+/**
+ * GeminiProvider: Uses Google AI Studio (Gemini 2.5 Flash / 1.5 Flash)
+ * with multimodal capabilities, reading both text prompts and visual PDF documents directly.
+ */
+export class GeminiProvider implements ILLMProvider {
+  private ai: GoogleGenAI;
+  private model: string;
+
+  constructor(apiKey: string, model: string = 'gemini-2.5-flash') {
+    this.ai = new GoogleGenAI({ apiKey });
+    this.model = model;
+  }
+
+  async generatePresentationScript(
+    prompt: string,
+    options?: ScriptGenerationOptions
+  ): Promise<PresentationManifest> {
+    const templateId = options?.templateId || 'tech-modern-dark';
+    const targetSlideCount = options?.targetSlideCount || 5;
+    const presId = `pres-${Date.now()}`;
+
+    const systemPrompt = `You are an expert presentation designer and video director.
+Your task is to transform the user's input (and any attached PDF document) into a structured presentation video script.
+
+IMPORTANT GUIDELINES:
+1. SEPARATION OF CONCERNS:
+   - visual: Contains crisp, concise, high-impact titles, subtitles, bullet points, charts, or quotes.
+   - narration.script: Contains natural, conversational spoken prose for a voiceover actor / TTS engine.
+   - If a slide visual contains equations (e.g. E = mc^2) or symbols, the narration.script MUST spell them out phonetically (e.g., "E equals m c squared"). Do not put raw mathematical formulas or symbols in narration.script.
+
+2. SLIDE TYPES TO USE:
+   - 'title': Opening slide with title, subtitle, and badge.
+   - 'bullet-list': 3-4 bullet takeaways.
+   - 'stat-chart': Visual metrics or bar chart comparisons (specify chartData or metrics).
+   - 'image-content': Explains a visual diagram or concept, with an imagePrompt describing the scene.
+   - 'quote': Memorable takeaway or conclusion quote with author.
+
+3. PDF VISUAL UNDERSTANDING:
+   - If a PDF is attached, analyze it VISUALLY (charts, diagrams, figures, layout, tables, key findings) as well as its text.
+   - Extract key insights, statistics, and conclusions from the PDF into appropriate visual slides.
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "id": "${presId}",
+  "topic": "topic summary",
+  "title": "presentation title",
+  "templateId": "${templateId}",
+  "fps": 30,
+  "width": 1920,
+  "height": 1080,
+  "totalDurationInFrames": 0,
+  "slides": [
+    {
+      "id": "${presId}-slide-1",
+      "type": "title",
+      "visual": {
+        "title": "...",
+        "subtitle": "...",
+        "badge": "..."
+      },
+      "narration": {
+        "script": "spoken voiceover text..."
+      }
+    }
+    // ... between 4 and ${targetSlideCount} slides
+  ]
+}`;
+
+    const contents: any[] = [];
+
+    // If PDF is provided, attach it as visual inlineData for Gemini
+    if (options?.pdfPath && fs.existsSync(options.pdfPath)) {
+      const pdfBuffer = fs.readFileSync(options.pdfPath);
+      contents.push({
+        inlineData: {
+          mimeType: 'application/pdf',
+          data: pdfBuffer.toString('base64'),
+        },
+      });
+      contents.push({
+        text: `Analyze the attached PDF visually and textually. Based on its content, generate a presentation video script following the requested structure. User additional notes: ${prompt || 'Summarize key insights'}`,
+      });
+    } else {
+      contents.push({
+        text: `Topic / Request: ${prompt}\nGenerate a presentation video script with ~${targetSlideCount} slides following the requested structure.`,
+      });
+    }
+
+    const response = await this.ai.models.generateContent({
+      model: this.model,
+      contents,
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    const responseText = response.text?.trim() || '{}';
+    let parsed: any;
+    try {
+      parsed = JSON.parse(responseText);
+    } catch (err) {
+      console.error('Failed to parse Gemini response as JSON:', responseText);
+      throw new Error('Gemini did not return valid JSON');
+    }
+
+    // Ensure id and templateId
+    parsed.id = parsed.id || presId;
+    parsed.templateId = parsed.templateId || templateId;
+
+    return PresentationManifestSchema.parse(parsed);
   }
 }
 
@@ -128,10 +244,18 @@ export class MockLLMProvider implements ILLMProvider {
  * Factory function to retrieve the configured LLM provider
  */
 export function getLLMProvider(): ILLMProvider {
-  const providerType = process.env.LLM_PROVIDER || 'mock';
-  switch (providerType) {
-    case 'mock':
-    default:
-      return new MockLLMProvider();
+  const providerType = process.env.LLM_PROVIDER || 'gemini';
+  const geminiApiKey = process.env.GEMINI_API_KEY;
+
+  if (providerType === 'gemini' && geminiApiKey && geminiApiKey.trim().length > 0) {
+    return new GeminiProvider(geminiApiKey.trim());
   }
+
+  if (providerType === 'gemini') {
+    console.warn(
+      '[LLM Provider] GEMINI_API_KEY is not set in .env. Falling back to MockLLMProvider for offline testing.'
+    );
+  }
+
+  return new MockLLMProvider();
 }

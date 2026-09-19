@@ -1,9 +1,10 @@
-import { getLLMProvider, ILLMProvider } from '../providers/llm.provider.js';
-import { PresentationManifest, PresentationManifestSchema } from '../types/presentation.js';
+import { getLLMProvider, ILLMProvider } from '../providers/llm.provider';
+import { PresentationManifest, PresentationManifestSchema } from '../types/presentation';
 
 export interface OrchestratorOptions {
   templateId?: string;
   targetSlideCount?: number;
+  pdfPath?: string;
 }
 
 export class OrchestratorAgent {
@@ -14,20 +15,16 @@ export class OrchestratorAgent {
   }
 
   /**
-   * Generates a fully validated presentation manifest from a user topic/prompt.
+   * Generates a fully validated presentation manifest from a user topic/prompt or visual PDF.
    */
   async generatePresentation(
     prompt: string,
     options?: OrchestratorOptions
   ): Promise<PresentationManifest> {
-    if (!prompt || prompt.trim().length === 0) {
-      throw new Error('Prompt cannot be empty');
-    }
-
-    // Call LLM provider
-    const rawManifest = await this.llmProvider.generatePresentationScript(prompt, {
+    const rawManifest = await this.llmProvider.generatePresentationScript(prompt || '', {
       templateId: options?.templateId || 'tech-modern-dark',
-      targetSlideCount: options?.targetSlideCount || 4,
+      targetSlideCount: options?.targetSlideCount || 5,
+      pdfPath: options?.pdfPath,
     });
 
     // Validate structure against Zod schema
