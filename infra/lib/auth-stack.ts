@@ -1,4 +1,5 @@
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   CfnOutput,
   Duration,
@@ -30,7 +31,10 @@ export class AuthStack extends Stack {
       this,
       "PostConfirmation",
       {
-        entry: path.resolve(process.cwd(), "lambda/post-confirmation.ts"),
+        entry: path.resolve(
+          path.dirname(fileURLToPath(import.meta.url)),
+          "../../lambda/post-confirmation.ts",
+        ),
         handler: "handler",
         runtime: lambda.Runtime.NODEJS_24_X,
         timeout: Duration.seconds(10),
