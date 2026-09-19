@@ -8,10 +8,10 @@ export interface OrchestratorOptions {
 }
 
 export class OrchestratorAgent {
-  private llmProvider: ILLMProvider;
+  private customProvider?: ILLMProvider;
 
   constructor(llmProvider?: ILLMProvider) {
-    this.llmProvider = llmProvider || getLLMProvider();
+    this.customProvider = llmProvider;
   }
 
   /**
@@ -21,7 +21,8 @@ export class OrchestratorAgent {
     prompt: string,
     options?: OrchestratorOptions
   ): Promise<PresentationManifest> {
-    const rawManifest = await this.llmProvider.generatePresentationScript(prompt || '', {
+    const provider = this.customProvider || getLLMProvider();
+    const rawManifest = await provider.generatePresentationScript(prompt || '', {
       templateId: options?.templateId || 'tech-modern-dark',
       targetSlideCount: options?.targetSlideCount || 5,
       pdfPath: options?.pdfPath,

@@ -26,14 +26,36 @@ export const MetricItemSchema = z.object({
 });
 export type MetricItem = z.infer<typeof MetricItemSchema>;
 
-// Visual Content Schema
+// Resilient Visual Content Schema
 export const VisualContentSchema = z.object({
-  title: z.string(),
+  title: z
+    .preprocess((val) => (typeof val === 'string' && val.trim() ? val : 'Summary'), z.string())
+    .default('Summary'),
   subtitle: z.string().optional(),
   badge: z.string().optional(),
   bullets: z.array(z.string()).optional(),
-  metrics: z.array(MetricItemSchema).optional(),
-  chartData: z.array(ChartItemSchema).optional(),
+  metrics: z
+    .preprocess((val) => {
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        return Object.entries(val).map(([label, value]) => ({
+          label,
+          value: String(value),
+        }));
+      }
+      return val;
+    }, z.array(MetricItemSchema).optional())
+    .optional(),
+  chartData: z
+    .preprocess((val) => {
+      if (val && typeof val === 'object' && !Array.isArray(val)) {
+        return Object.entries(val).map(([label, value]) => ({
+          label,
+          value: typeof value === 'number' ? value : Number(value) || 0,
+        }));
+      }
+      return val;
+    }, z.array(ChartItemSchema).optional())
+    .optional(),
   chartType: z.enum(['bar', 'comparison']).optional(),
   imagePrompt: z.string().optional(),
   imageUrl: z.string().optional(),
@@ -44,9 +66,9 @@ export type VisualContent = z.infer<typeof VisualContentSchema>;
 
 // Narration & Audio Content Schema
 export const NarrationContentSchema = z.object({
-  // The spoken script (explicitly separated from visual copy to pronounce equations/symbols naturally)
-  script: z.string(),
-  // Generated audio metadata (populated after TTS processing)
+  script: z
+    .preprocess((val) => (typeof val === 'string' ? val : ''), z.string())
+    .default(''),
   audioPath: z.string().optional(),
   durationSeconds: z.number().optional(),
   durationInFrames: z.number().optional(),
