@@ -47,12 +47,13 @@ export class AuthStack extends Stack {
         },
       },
     );
-    usersTable.grantWriteData(postConfirmation);
+    // The post-confirmation trigger only creates or updates the user profile.
+    usersTable.grant(postConfirmation, "dynamodb:UpdateItem");
 
     const userPool = new cognito.UserPool(this, "UserPool", {
       userPoolName: "ctrlaltwin-users",
       selfSignUpEnabled: true,
-      signInAliases: { email: true },
+      signInAliases: { username: true, email: true },
       signInCaseSensitive: false,
       autoVerify: { email: true },
       standardAttributes: {
@@ -74,11 +75,32 @@ export class AuthStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
 
+    const userPoolDomain = new cognito.UserPoolDomain(this, "CognitoDomain", {
+      userPool,
+      cognitoDomain: {
+        domainPrefix: `ctrlaltwin-auth-${this.account}-${this.region}`,
+      },
+    });
+
     const userPoolClient = userPool.addClient("WebClient", {
       userPoolClientName: "ctrlaltwin-web",
       generateSecret: false,
-      disableOAuth: true,
       preventUserExistenceErrors: true,
+      supportedIdentityProviders: [
+        cognito.UserPoolClientIdentityProvider.COGNITO,
+      ],
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        scopes: [
+          cognito.OAuthScope.OPENID,
+          cognito.OAuthScope.EMAIL,
+          cognito.OAuthScope.PROFILE,
+        ],
+        callbackUrls: ["http://localhost:5174/", "http://localhost:5173/"],
+        logoutUrls: ["http://localhost:5174/", "http://localhost:5173/"],
+      },
       authFlows: {
         userSrp: true,
       },
@@ -108,6 +130,9 @@ export class AuthStack extends Stack {
     });
     new CfnOutput(this, "CognitoUserPoolClientId", {
       value: userPoolClient.userPoolClientId,
+    });
+    new CfnOutput(this, "CognitoDomainOutput", {
+      value: userPoolDomain.domainName,
     });
     new CfnOutput(this, "UsersTableName", { value: usersTable.tableName });
   }

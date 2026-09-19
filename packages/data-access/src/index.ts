@@ -10,9 +10,11 @@ export type UserRole = "user" | "admin";
 
 export interface UserProfile {
   userId: string;
+  username?: string;
   email: string;
   displayName: string;
   role: UserRole;
+  authProvider: "cognito" | "google";
   createdAt: string;
   updatedAt: string;
 }

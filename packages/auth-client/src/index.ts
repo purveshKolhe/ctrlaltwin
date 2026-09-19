@@ -5,10 +5,13 @@ import {
   fetchAuthSession,
   getCurrentUser,
   resetPassword,
+  resendSignUpCode,
   signIn,
+  signInWithRedirect,
   signOut,
   signUp,
   type ConfirmSignUpInput,
+  type ResendSignUpCodeOutput,
   type ResetPasswordOutput,
   type SignInOutput,
   type SignUpOutput,
@@ -18,9 +21,13 @@ export interface CognitoClientConfig {
   region: string;
   userPoolId: string;
   userPoolClientId: string;
+  userPoolDomain?: string;
+  redirectSignIn?: string;
+  redirectSignOut?: string;
 }
 
-export interface SignUpWithEmailInput {
+export interface SignUpInputParams {
+  username: string;
   email: string;
   password: string;
   displayName: string;
@@ -34,7 +41,7 @@ export function configureAuth(config: CognitoClientConfig): void {
     throw new Error("Cognito region, user pool ID, and client ID are required");
   }
 
-  Amplify.configure({
+  const amplifyConfig: any = {
     Auth: {
       Cognito: {
         userPoolId: config.userPoolId,
@@ -42,7 +49,21 @@ export function configureAuth(config: CognitoClientConfig): void {
         signUpVerificationMethod: "code",
       },
     },
-  });
+  };
+
+  if (config.userPoolDomain && config.redirectSignIn && config.redirectSignOut) {
+    amplifyConfig.Auth.Cognito.loginWith = {
+      oauth: {
+        domain: config.userPoolDomain,
+        scopes: ["openid", "email", "profile"],
+        redirectSignIn: [config.redirectSignIn],
+        redirectSignOut: [config.redirectSignOut],
+        responseType: "code",
+      },
+    };
+  }
+
+  Amplify.configure(amplifyConfig);
   configured = true;
 }
 
@@ -52,14 +73,15 @@ function assertConfigured(): void {
   }
 }
 
-export async function signUpWithEmail(
-  input: SignUpWithEmailInput,
+export async function signUpUser(
+  input: SignUpInputParams,
 ): Promise<SignUpOutput> {
   assertConfigured();
+  const username = input.username.trim().toLowerCase();
   const email = input.email.trim().toLowerCase();
 
   return signUp({
-    username: email,
+    username,
     password: input.password,
     options: {
       userAttributes: {
@@ -80,29 +102,34 @@ export async function confirmEmail(
   });
 }
 
-export async function signInWithEmail(
-  email: string,
+export async function signInWithIdentifier(
+  identifier: string,
   password: string,
 ): Promise<SignInOutput> {
   assertConfigured();
-  return signIn({ username: email.trim().toLowerCase(), password });
+  return signIn({ username: identifier.trim().toLowerCase(), password });
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  assertConfigured();
+  return signInWithRedirect({ provider: "Google" });
 }
 
 export async function beginPasswordReset(
-  email: string,
+  identifier: string,
 ): Promise<ResetPasswordOutput> {
   assertConfigured();
-  return resetPassword({ username: email.trim().toLowerCase() });
+  return resetPassword({ username: identifier.trim().toLowerCase() });
 }
 
 export async function finishPasswordReset(
-  email: string,
+  identifier: string,
   confirmationCode: string,
   newPassword: string,
 ): Promise<void> {
   assertConfigured();
   await confirmResetPassword({
-    username: email.trim().toLowerCase(),
+    username: identifier.trim().toLowerCase(),
     confirmationCode: confirmationCode.trim(),
     newPassword,
   });
@@ -126,4 +153,11 @@ export async function getSignedInUser() {
 export async function signOutUser(): Promise<void> {
   assertConfigured();
   await signOut();
+}
+
+export async function resendVerificationCode(
+  identifier: string,
+): Promise<ResendSignUpCodeOutput> {
+  assertConfigured();
+  return resendSignUpCode({ username: identifier.trim().toLowerCase() });
 }
