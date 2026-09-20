@@ -1,0 +1,114 @@
+{
+  "theme": "Dark Cinematic Studio",
+  "archetype": "ARCHETYPE 4: SWISS & HIGH-CONTRAST mixed with ARCHETYPE 5: LUXURY",
+  "typography": {
+    "headings": "Cabinet Grotesk",
+    "body": "Switzer",
+    "mono": "JetBrains Mono",
+    "import_cdn": "<link href=\"https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@800,500,700,900&f[]=switzer@400,500,600,700&display=swap\" rel=\"stylesheet\"> <link href=\"https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap\" rel=\"stylesheet\">",
+    "rules": [
+      "H1 must be fluid (clamp) up to text-6xl or text-7xl, tracking-tighter. Never use standard bold; use font-black.",
+      "Inputs, loaders, and metadata must use JetBrains Mono, uppercase tracking-widest for labels.",
+      "The 'Anti-Default Rule': Do not use Inter, Roboto, or Open Sans."
+    ]
+  },
+  "colors": {
+    "strategy": "Cinematic Director's Desk. Pitch black foundation with blazing Studio Orange accents for actions.",
+    "css_variables": {
+      "--background": "0 0% 4%", 
+      "--foreground": "60 10% 96%", 
+      "--card": "0 0% 8%", 
+      "--card-foreground": "60 10% 96%", 
+      "--popover": "0 0% 8%", 
+      "--popover-foreground": "60 10% 96%", 
+      "--primary": "16 100% 50%", 
+      "--primary-foreground": "0 0% 100%", 
+      "--secondary": "0 0% 12%", 
+      "--secondary-foreground": "60 10% 96%", 
+      "--muted": "0 0% 15%", 
+      "--muted-foreground": "0 0% 60%", 
+      "--accent": "16 100% 50%", 
+      "--accent-foreground": "0 0% 100%", 
+      "--destructive": "0 84.2% 60.2%", 
+      "--destructive-foreground": "0 0% 98%", 
+      "--border": "0 0% 15%", 
+      "--input": "0 0% 15%", 
+      "--ring": "16 100% 50%", 
+      "--radius": "0.5rem"
+    },
+    "rules": [
+      "DO NOT use generic purple-on-white 'AI' themes.",
+      "Never use pure transparent backgrounds over images. Use bg-black/60 with backdrop-blur-xl.",
+      "Studio Orange (#FF4500) is ONLY for the primary generation action and active states (like 'ON AIR')."
+    ]
+  },
+  "visual_enhancers": {
+    "lighting": "Cinematic. Use the provided beam of light image as a fixed background plate with mix-blend-screen and opacity-20.",
+    "textures": "MANDATORY: Add a fixed SVG noise overlay (pointer-events-none, opacity-5) over the entire application.",
+    "borders": "1px solid border-white/10. No heavy box-shadows. Use subtle inner glows.",
+    "glassmorphism": "High opacity (bg-black/60) with heavy blur (backdrop-blur-2xl) and 1px border-white/10 for the video player and sticky nav."
+  },
+  "layouts": {
+    "global": "Generous Spacing Philosophy. Use p-8 to p-24. Never cramp elements.",
+    "hero": "Fullscreen cinematic narrative. Massive Cabinet Grotesk H1 centered or left-aligned. Below it, the primary prompt input field. It must be HUGE (text-2xl or text-3xl JetBrains Mono), max-w-4xl. No standard input styling—use a raw input with bg-white/5, backdrop-blur, bottom border, and focus:border-primary glow.",
+    "generation_state": "Immersive overlay. Do not use standard spinners. Use a GSAP-driven typographic loading sequence (e.g., 'Writing Script...', 'Rendering Frames...') in JetBrains Mono.",
+    "video_player": "Cinematic Presentation Player. 16:9 ratio, wrapped in crystal glassmorphism. DO NOT use native <video> controls. Custom UI: progress bar, play/pause, timeline dots for slides. Slides auto-advance crossfading via GSAP. Audio plays in background.",
+    "gallery_bento": "Mode A 'Tetris' Grid for generated videos. Asymmetrical cards showing video thumbnails. Some span 2 rows/cols, others 1. gap-8.",
+    "marketing_steps": "Narrative scroll sequence for 'How it Works'. Chapters fade in as user scrolls."
+  },
+  "motion": {
+    "gsap_rules": [
+      "Hero Reveal: Staggered characters/words fade up (y: 20, opacity: 0 to 1, duration: 1) on load.",
+      "Input Focus: GSAP animation to slightly scale up the input wrapper (scale: 1.02) and intensify border glow when user focuses.",
+      "Scroll: Use ScrollTrigger to fade and slide up marketing sections as they enter the viewport.",
+      "Video Player Scrubber: GSAP ticker to smoothly update the custom progress bar in sync with audio.",
+      "Slide Transition: GSAP crossfade (opacity) for slide images."
+    ]
+  },
+  "components_blueprint": {
+    "prompt_input": "The absolute star of the page. Massive text input/textarea. HTML/Tailwind input with bg-white/5, text-2xl JetBrains Mono, placeholder-white/30, border border-white/10, rounded-xl, p-8, focus:border-primary focus:ring-1 focus:ring-primary shadow-[0_0_40px_rgba(255,69,0,0.1)].",
+    "video_player": "Custom DOM layout. Absolute positioned slide images (opacity-0 by default, active is opacity-1). Custom absolute positioned scrubber at the bottom.",
+    "hackathon_badge": "Subtle, fixed bottom-right badge or integrated in footer. Text: 'Built for WeMakeDevs x AWS Hackathon'. Use a subtle AWS logo reference."
+  },
+  "image_urls": {
+    "hero_background": {
+      "url": "https://images.pexels.com/photos/4722576/pexels-photo-4722576.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=650&w=940",
+      "description": "Cinematic light beam penetrating smoke. Use as a background plate with mix-blend-screen and low opacity."
+    },
+    "gallery_placeholders": {
+      "url": "https://images.unsplash.com/photo-1709377195538-5522ed0f9e10?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMjd8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGNpbmVtYXRpYyUyMGxpZ2h0aW5nfGVufDB8fHx8MTc4OTgwNDA3M3ww&ixlib=rb-4.1.0&q=85",
+      "description": "Abstract amber curves on black. Use as placeholder thumbnails for generated presentations in the library."
+    }
+  },
+  "accessibility": [
+    "All interactive and key informational elements MUST include a `data-testid` attribute (e.g., `data-testid='prompt-input'`).",
+    "Normal Text (below 18px): Minimum 4.5:1 contrast ratio against background.",
+    "Focus States: Must have HIGHER contrast than default state."
+  ],
+  "instructions_to_main_agent": [
+    "You are building a React.js (JavaScript, NOT TypeScript) application using Tailwind CSS.",
+    "Install and use `gsap` for all animations.",
+    "Install `@phosphor-icons/react` for elegant icons.",
+    "Install `@studio-freight/react-lenis` for smooth premium scrolling.",
+    "Do NOT use HTML `<video>` element with default controls. Build a custom DOM layout for the player.",
+    "Use Shadcn UI primarily for complex logic components (Dialogs, Toasts), but style them heavily to match the dark cinematic theme. Do not use generic Shadcn cards.",
+    "Use `sonner` for toasts.",
+    "Ensure all fonts are imported into the root CSS/HTML as specified.",
+    "Follow the UNIVERSAL GUIDELINES FOR MAIN AGENT rigorously."
+  ],
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur).",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. Always add transitions for specific interactive elements like button, input excluding transforms.",
+    "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file.",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Prioritize using pre-existing components from src/components/ui when applicable."
+  ]
+}
