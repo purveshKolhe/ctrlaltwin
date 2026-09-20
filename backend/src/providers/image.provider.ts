@@ -16,8 +16,10 @@ export interface IImageProvider {
 }
 
 /**
- * PollinationsImageProvider: Generates high quality medical and contextual visual
- * assets using the free Pollinations AI image generation API.
+ * PollinationsImageProvider: Generates high quality visual assets using
+ * the free Pollinations AI image generation API.
+ * All images are converted to local Base64 Data URIs so Remotion renders
+ * instantaneously without network latency or delayRender timeouts.
  */
 export class PollinationsImageProvider implements IImageProvider {
   async generateImage(
@@ -33,16 +35,15 @@ export class PollinationsImageProvider implements IImageProvider {
     const width = options?.width || 1200;
     const height = options?.height || 800;
 
-    // Enhance prompt for clean modern healthcare photography
     const cleanPrompt = prompt.replace(/[^\w\s,-]/g, ' ').trim();
-    const enhancedPrompt = `${cleanPrompt}, professional healthcare medical photography, modern clean hospital clinic, natural daylight, high resolution`;
+    const enhancedPrompt = `${cleanPrompt}, professional editorial photography, cinematic lighting, modern clean presentation visual, high resolution, 4k`;
     const encodedPrompt = encodeURIComponent(enhancedPrompt);
-    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${Date.now() % 10000}`;
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
 
     try {
-      console.log(`[PollinationsImageProvider] Fetching AI image for ${slideId} from Pollinations...`);
+      console.log(`[PollinationsImageProvider] Fetching AI image for ${slideId} ("${prompt.slice(0, 45)}...")...`);
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 12000); // 12s timeout
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
 
       const res = await fetch(pollinationsUrl, { signal: controller.signal });
       clearTimeout(timeout);
@@ -51,9 +52,8 @@ export class PollinationsImageProvider implements IImageProvider {
         const arrayBuffer = await res.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
         fs.writeFileSync(localPath, buffer);
-        console.log(`[PollinationsImageProvider] Saved image for ${slideId} (${buffer.length} bytes)`);
+        console.log(`[PollinationsImageProvider] ✅ Saved image for ${slideId} (${buffer.length} bytes)`);
 
-        // Convert to data URI for zero-latency, sandbox-safe Remotion rendering
         const base64Data = `data:image/jpeg;base64,${buffer.toString('base64')}`;
         return {
           imageUrl: base64Data,
@@ -63,21 +63,33 @@ export class PollinationsImageProvider implements IImageProvider {
         console.warn(`[PollinationsImageProvider] Pollinations returned HTTP ${res.status}`);
       }
     } catch (err: any) {
-      console.warn(`[PollinationsImageProvider] Warning: could not download image (${err.message}). Using fallback.`);
+      console.warn(`[PollinationsImageProvider] Warning: could not download image (${err.message}). Using local high-res visual fallback.`);
     }
 
-    // Fallback: Curated high-res medical Unsplash photography
-    const fallbackUrls = [
-      'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80',
-      'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80',
-    ];
-    const fallbackUrl = fallbackUrls[Math.abs(slideId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)) % fallbackUrls.length];
+    // Local Data URI fallback: Sleek modern presentation graphic matching topic
+    const svgFallback = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#091736" />
+      <stop offset="50%" stop-color="#0d276b" />
+      <stop offset="100%" stop-color="#050d24" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+  <rect width="${width}" height="${height}" fill="url(#bg)" />
+  <circle cx="${width * 0.5}" cy="${height * 0.45}" r="${Math.min(width, height) * 0.28}" fill="url(#accent)" />
+  <text x="${width * 0.5}" y="${height * 0.85}" fill="#ffffff" opacity="0.85" font-family="system-ui, sans-serif" font-size="24" font-weight="600" text-anchor="middle">
+    ${cleanPrompt.slice(0, 48)}
+  </text>
+</svg>`;
 
+    const fallbackBase64 = `data:image/svg+xml;base64,${Buffer.from(svgFallback).toString('base64')}`;
     return {
-      imageUrl: fallbackUrl,
-      localPath: fallbackUrl,
+      imageUrl: fallbackBase64,
+      localPath,
     };
   }
 }
@@ -111,8 +123,9 @@ export class MockImageProvider implements IImageProvider {
     fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(localPath, svgContent, 'utf-8');
 
+    const base64Data = `data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`;
     return {
-      imageUrl: localPath,
+      imageUrl: base64Data,
       localPath,
     };
   }

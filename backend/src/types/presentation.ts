@@ -83,6 +83,7 @@ export const VisualContentSchema = z.object({
   highlightCard: HighlightCardSchema.optional(),
   imagePrompt: z.string().optional(),
   imageUrl: z.string().optional(),
+  secondaryImageUrl: z.string().optional(),
   quote: z.string().optional(),
   author: z.string().optional(),
   footerText: z.string().optional(),

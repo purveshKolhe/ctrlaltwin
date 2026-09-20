@@ -5,8 +5,8 @@ import fs from 'fs';
 import multer from 'multer';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GenerationJob, PresentationPipeline } from './pipeline';
-import { THEMES } from './remotion/themes';
+import { GenerationJob, PresentationPipeline } from './pipeline.js';
+import { THEMES } from './remotion/themes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +27,7 @@ fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 app.use(cors());
 app.use(express.json());
 app.use(express.static(PUBLIC_DIR));
+app.use('/out', express.static(WORK_DIR));
 
 // Configure multer for PDF uploads
 const storage = multer.diskStorage({
@@ -62,6 +63,25 @@ app.get('/api/templates', (_req: Request, res: Response) => {
       backgroundColor: t.backgroundColor,
     })),
   });
+});
+
+// List all presentation jobs
+app.get('/api/presentations', (_req: Request, res: Response) => {
+  const list = Array.from(jobs.values()).map((job) => ({
+    id: job.id,
+    title: job.manifest?.title || job.prompt || 'Untitled Presentation',
+    subtitle: job.manifest?.slides?.[0]?.visual?.subtitle || '',
+    prompt: job.prompt,
+    thumbnail: job.manifest?.slides?.[0]?.visual?.imageUrl || null,
+    slide_count: job.manifest?.slides?.length || 0,
+    created_at: job.createdAt.toISOString(),
+    status: job.status,
+    hasVideo: !!job.videoPath && (job.videoPath.startsWith('http') || fs.existsSync(job.videoPath)),
+    progress: job.progress,
+  }));
+
+  list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  res.json(list);
 });
 
 // Create and trigger a presentation generation job (supports JSON or multipart with PDF)
@@ -125,20 +145,47 @@ app.get('/api/presentations/:id', (req: Request, res: Response) => {
     return res.status(404).json({ error: 'Job not found' });
   }
 
+  const slides =
+    job.manifest?.slides?.map((s, idx) => ({
+      index: idx,
+      title: s.visual.title || `Slide ${idx + 1}`,
+      subtitle: s.visual.subtitle || '',
+      bullets: s.visual.bullets || [],
+      narration: s.narration.script || s.visual.title || '',
+      image: s.visual.imageUrl || null,
+    })) || [];
+
   res.json({
     id: job.id,
+    title: job.manifest?.title || job.prompt || 'Untitled Presentation',
     status: job.status,
     progress: job.progress,
     prompt: job.prompt,
     templateId: job.templateId,
     manifest: job.manifest,
-    hasVideo: !!job.videoPath && fs.existsSync(job.videoPath),
+    slides,
+    videoUrl:
+      job.videoPath && (job.videoPath.startsWith('http') || fs.existsSync(job.videoPath))
+        ? (job.videoPath.startsWith('http') ? job.videoPath : `/api/presentations/${job.id}/video`)
+        : undefined,
+    hasVideo: !!job.videoPath && (job.videoPath.startsWith('http') || fs.existsSync(job.videoPath)),
     error: job.error,
     logs: job.logs || [],
     metrics: job.metrics || {},
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   });
+});
+
+// Delete presentation job
+app.delete('/api/presentations/:id', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  if (!jobs.has(id)) {
+    return res.status(404).json({ error: 'Job not found' });
+  }
+
+  jobs.delete(id);
+  res.json({ ok: true });
 });
 
 // Get raw plaintext backend logs for a job
@@ -157,8 +204,17 @@ app.get('/api/presentations/:id/logs', (req: Request, res: Response) => {
 app.get('/api/presentations/:id/video', (req: Request, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const job = jobs.get(id);
-  if (!job || !job.videoPath || !fs.existsSync(job.videoPath)) {
+  if (!job || !job.videoPath) {
     return res.status(404).json({ error: 'Video not found or still rendering' });
+  }
+
+  // If rendered via AWS Lambda, redirect to the public S3 URL
+  if (job.videoPath.startsWith('http://') || job.videoPath.startsWith('https://')) {
+    return res.redirect(job.videoPath);
+  }
+
+  if (!fs.existsSync(job.videoPath)) {
+    return res.status(404).json({ error: 'Video file does not exist locally' });
   }
 
   res.sendFile(job.videoPath);

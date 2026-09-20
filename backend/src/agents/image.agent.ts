@@ -10,7 +10,7 @@ export class ImageAgent {
   }
 
   /**
-   * Identifies slides requiring visuals, generates AI assets via Pollinations, and binds the image path.
+   * Identifies slides requiring visuals and generates AI assets via Pollinations in parallel.
    */
   async processImages(
     manifest: PresentationManifest,
@@ -18,19 +18,19 @@ export class ImageAgent {
   ): Promise<PresentationManifest> {
     const imagesDir = path.join(outputBaseDir, manifest.id, 'images');
 
-    const updatedSlides: SlideData[] = [];
-
-    for (const slide of manifest.slides) {
+    const imagePromises = manifest.slides.map(async (slide): Promise<SlideData> => {
       const needsImage =
         slide.type === 'two-column' ||
         slide.type === 'image-content' ||
         slide.type === 'stat-highlight' ||
         slide.type === 'stat-chart';
 
+      let updatedSlide = { ...slide };
+
       if (!slide.visual.imageUrl && (slide.visual.imagePrompt || needsImage)) {
         const prompt =
           slide.visual.imagePrompt ||
-          `${slide.visual.title}, ${slide.visual.subtitle || 'healthcare medical care'}`;
+          `${manifest.topic || manifest.title}: ${slide.visual.title}`;
 
         const isPortrait = slide.type === 'two-column' || slide.type === 'stat-highlight';
         try {
@@ -41,21 +41,45 @@ export class ImageAgent {
             { width: isPortrait ? 800 : 1200, height: isPortrait ? 1200 : 800 }
           );
 
-          updatedSlides.push({
-            ...slide,
+          updatedSlide = {
+            ...updatedSlide,
             visual: {
-              ...slide.visual,
+              ...updatedSlide.visual,
               imageUrl: result.imageUrl,
             },
-          });
+          };
         } catch (err) {
-          console.warn(`[ImageAgent] Could not generate image for slide ${slide.id}:`, err);
-          updatedSlides.push(slide);
+          console.warn(`[ImageAgent] Could not generate primary image for slide ${slide.id}:`, err);
         }
-      } else {
-        updatedSlides.push(slide);
       }
-    }
+
+      // If image-content requires dual images, generate the secondary image as well
+      if (slide.type === 'image-content' && !slide.visual.secondaryImageUrl) {
+        try {
+          const secondaryPrompt = `${manifest.topic || manifest.title}: ${slide.visual.title} detail perspective`;
+          const secondaryResult = await this.imageProvider.generateImage(
+            secondaryPrompt,
+            `${slide.id}-sec`,
+            imagesDir,
+            { width: 1200, height: 800 }
+          );
+
+          updatedSlide = {
+            ...updatedSlide,
+            visual: {
+              ...updatedSlide.visual,
+              secondaryImageUrl: secondaryResult.imageUrl,
+            },
+          };
+        } catch (err) {
+          console.warn(`[ImageAgent] Could not generate secondary image for slide ${slide.id}:`, err);
+        }
+      }
+
+      return updatedSlide;
+    });
+
+    const updatedSlides = await Promise.all(imagePromises);
 
     return {
       ...manifest,

@@ -238,8 +238,12 @@
             clearInterval(pollInterval);
             submitBtn.disabled = false;
             resultCard.style.display = 'block';
-            videoPlayer.src = `/api/presentations/${jobId}/video`;
-            downloadBtn.href = `/api/presentations/${jobId}/video`;
+            const videoUrl = job.videoUrl || `/api/presentations/${jobId}/video`;
+            videoPlayer.src = videoUrl;
+            downloadBtn.href = videoUrl;
+            if (videoUrl.startsWith('http')) {
+              downloadBtn.setAttribute('target', '_blank');
+            }
           } else if (job.status === 'failed') {
             clearInterval(pollInterval);
             submitBtn.disabled = false;

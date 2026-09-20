@@ -2,6 +2,7 @@ import React from 'react';
 import {
   AbsoluteFill,
   Audio,
+  Img,
   interpolate,
   spring,
   useCurrentFrame,
@@ -15,7 +16,7 @@ import { SlideData, ThemeConfig } from '../../../types/presentation';
 
 /**
  * Critically damped Apple-style spring entrance helper.
- * Zero layout thrashing, operates exclusively on transforms and opacities.
+ * Operates on GPU-accelerated transforms and opacities.
  */
 const useSpringEntrance = (delayFrames: number = 0, distance: number = 28) => {
   const frame = useCurrentFrame();
@@ -85,15 +86,20 @@ const useMetricPop = (delayFrames: number = 10) => {
   };
 };
 
+const FALLBACK_IMAGE_DATA_URI =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23091736"/><stop offset="50%" stop-color="%230d276b"/><stop offset="100%" stop-color="%23050d24"/></linearGradient></defs><rect width="800" height="1200" fill="url(%23g)"/><circle cx="400" cy="500" r="180" fill="%230284c7" opacity="0.3"/><rect x="100" y="800" width="600" height="14" rx="7" fill="%23ffffff" opacity="0.2"/><rect x="100" y="840" width="400" height="14" rx="7" fill="%23ffffff" opacity="0.15"/></svg>';
+
 // ============================================================================
 // REUSABLE UI PRIMITIVES
 // ============================================================================
 
 const HeaderBar: React.FC<{
-  slideNumber?: string;
+  badge?: string;
   inverted?: boolean;
-}> = ({ slideNumber = '01 / 10', inverted = false }) => {
+}> = ({ badge, inverted = false }) => {
   const anim = useSpringEntrance(0, 16);
+
+  if (!badge) return null;
 
   return (
     <header
@@ -103,49 +109,29 @@ const HeaderBar: React.FC<{
         top: 0,
         left: 0,
         right: 0,
-        padding: '72px 96px 0 96px',
+        padding: '64px 96px 0 96px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         zIndex: 10,
       }}
     >
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div
           style={{
-            fontSize: '28px',
+            padding: '6px 16px',
+            borderRadius: '9999px',
+            backgroundColor: inverted ? 'rgba(255, 255, 255, 0.12)' : 'rgba(13, 39, 107, 0.08)',
+            border: inverted ? '1px solid rgba(255, 255, 255, 0.2)' : '1px solid rgba(13, 39, 107, 0.15)',
+            color: inverted ? '#ffffff' : '#0d276b',
+            fontSize: '14px',
             fontWeight: 600,
-            letterSpacing: '-0.02em',
-            color: inverted ? '#ffffff' : '#0a1b3f',
+            letterSpacing: '0.05em',
+            textTransform: 'uppercase',
           }}
         >
-          Borcelle Hospital
-        </span>
-        <span
-          style={{
-            fontSize: '16px',
-            fontWeight: 400,
-            letterSpacing: '0.02em',
-            color: inverted ? 'rgba(255, 255, 255, 0.7)' : '#55647e',
-          }}
-        >
-          Care at Every Step
-        </span>
-      </div>
-
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          fontSize: '16px',
-          fontWeight: 500,
-          color: inverted ? 'rgba(255, 255, 255, 0.8)' : '#0a1b3f',
-        }}
-      >
-        <span style={{ color: inverted ? 'rgba(255, 255, 255, 0.6)' : '#64748b' }}>
-          {slideNumber}
-        </span>
+          {badge}
+        </div>
       </div>
     </header>
   );
@@ -153,9 +139,11 @@ const HeaderBar: React.FC<{
 
 const FooterMeta: React.FC<{ inverted?: boolean; footerText?: string }> = ({
   inverted = false,
-  footerText = 'Healthcare Presentation',
+  footerText,
 }) => {
   const anim = useSpringEntrance(18, 14);
+
+  if (!footerText) return null;
 
   return (
     <footer
@@ -175,7 +163,6 @@ const FooterMeta: React.FC<{ inverted?: boolean; footerText?: string }> = ({
       }}
     >
       <span>{footerText}</span>
-      <span>Borcelle • 2025</span>
     </footer>
   );
 };
@@ -190,15 +177,16 @@ export const TitleSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
-  // Animations
   const headerAnim = useSpringEntrance(0, 20);
   const arrowAnim = useSpringEntrance(6, 16);
   const subAnim = useSpringEntrance(12, 24);
   const footAnim = useSpringEntrance(16, 16);
 
-  // Staggered Title Reveals
-  const titlePart1 = slide.visual.title.split(' ')[0] || 'Medical';
-  const titlePart2 = slide.visual.title.split(' ').slice(1).join(' ') || 'Presentation';
+  // Split title intelligently across lines if multi-word
+  const words = slide.visual.title.trim().split(/\s+/);
+  const mid = Math.ceil(words.length / 2);
+  const line1 = words.length > 1 ? words.slice(0, mid).join(' ') : words[0] || 'Presentation';
+  const line2 = words.length > 1 ? words.slice(mid).join(' ') : '';
 
   const t1Progress = spring({
     frame: frame - 4,
@@ -214,7 +202,7 @@ export const TitleSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
   const t1Y = interpolate(t1Progress, [0, 1], [120, 0], { extrapolateRight: 'clamp' });
   const t2Y = interpolate(t2Progress, [0, 1], [120, 0], { extrapolateRight: 'clamp' });
 
-  // Subtle floating silk wave animation
+  // Floating silk wave animation
   const waveDrift = interpolate(frame, [0, 300], [0, 40], { extrapolateRight: 'clamp' });
 
   return (
@@ -234,7 +222,7 @@ export const TitleSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
         `,
       }}
     >
-      {/* Subtle organic silk wave overlay with floating drift */}
+      {/* Organic silk wave overlay */}
       <svg
         style={{
           position: 'absolute',
@@ -265,7 +253,7 @@ export const TitleSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
         </defs>
       </svg>
 
-      {/* Main Content Container */}
+      {/* Main Container */}
       <div
         style={{
           position: 'relative',
@@ -279,39 +267,35 @@ export const TitleSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
           boxSizing: 'border-box',
         }}
       >
-        {/* Top Header: Brand & Tagline */}
+        {/* Top Header: Dynamic Category Badge & Minimalist Arrow */}
         <div
           style={{
             ...headerAnim,
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: 'center',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <h2
-              style={{
-                fontSize: '34px',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-                color: 'rgba(255, 255, 255, 0.95)',
-                margin: 0,
-                lineHeight: 1.2,
-              }}
-            >
-              Borcelle Hospital
-            </h2>
-            <p
-              style={{
-                fontSize: '20px',
-                fontWeight: 300,
-                letterSpacing: '0.02em',
-                color: 'rgba(255, 255, 255, 0.7)',
-                margin: 0,
-              }}
-            >
-              Care at Every Step
-            </p>
+          <div>
+            {slide.visual.badge && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '8px 20px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#ffffff',
+                }}
+              >
+                {slide.visual.badge}
+              </div>
+            )}
           </div>
 
           <div
@@ -337,81 +321,73 @@ export const TitleSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
           <div style={{ overflow: 'hidden' }}>
             <h1
               style={{
-                fontSize: '128px',
-                fontWeight: 500,
+                fontSize: line2 ? '110px' : '124px',
+                fontWeight: 600,
                 letterSpacing: '-0.035em',
-                lineHeight: 0.95,
+                lineHeight: 1.0,
                 color: '#ffffff',
                 margin: 0,
                 transform: `translate3d(0, ${t1Y}px, 0)`,
               }}
             >
-              {titlePart1}
+              {line1}
             </h1>
           </div>
-          <div style={{ overflow: 'hidden' }}>
-            <h1
+          {line2 && (
+            <div style={{ overflow: 'hidden', marginTop: '8px' }}>
+              <h1
+                style={{
+                  fontSize: '110px',
+                  fontWeight: 600,
+                  letterSpacing: '-0.035em',
+                  lineHeight: 1.0,
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  margin: 0,
+                  transform: `translate3d(0, ${t2Y}px, 0)`,
+                }}
+              >
+                {line2}
+              </h1>
+            </div>
+          )}
+          {slide.visual.subtitle && (
+            <p
               style={{
-                fontSize: '128px',
-                fontWeight: 500,
-                letterSpacing: '-0.035em',
-                lineHeight: 0.95,
-                color: 'rgba(255, 255, 255, 0.9)',
-                margin: 0,
-                transform: `translate3d(0, ${t2Y}px, 0)`,
+                ...subAnim,
+                marginTop: '36px',
+                fontSize: '26px',
+                fontWeight: 400,
+                letterSpacing: '0.01em',
+                color: 'rgba(255, 255, 255, 0.8)',
+                margin: '36px 0 0 0',
+                maxWidth: '900px',
+                lineHeight: 1.4,
               }}
             >
-              {titlePart2}
-            </h1>
-          </div>
-          <p
+              {slide.visual.subtitle}
+            </p>
+          )}
+        </div>
+
+        {/* Footer */}
+        {slide.visual.footerText ? (
+          <div
             style={{
-              ...subAnim,
-              marginTop: '32px',
-              fontSize: '26px',
-              fontWeight: 400,
-              letterSpacing: '0.02em',
-              color: 'rgba(255, 255, 255, 0.75)',
-              margin: '32px 0 0 0',
+              ...footAnim,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+              paddingTop: '28px',
+              fontSize: '16px',
+              color: 'rgba(255, 255, 255, 0.7)',
             }}
           >
-            {slide.visual.subtitle || 'Compassionate Care at Every Step'}
-          </p>
-        </div>
-
-        {/* Footer: Metadata & Category */}
-        <div
-          style={{
-            ...footAnim,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            paddingTop: '32px',
-            fontSize: '18px',
-            letterSpacing: '0.02em',
-            color: 'rgba(255, 255, 255, 0.7)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>Borcelle</span>
-            <span
-              style={{
-                width: '4px',
-                height: '4px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.4)',
-              }}
-            />
-            <span>2025</span>
+            <span>{slide.visual.footerText}</span>
           </div>
-
-          <div>
-            <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>
-              {slide.visual.footerText || 'Healthcare Presentation'}
-            </span>
-          </div>
-        </div>
+        ) : (
+          <div style={{ height: '24px' }} />
+        )}
       </div>
     </AbsoluteFill>
   );
@@ -432,7 +408,6 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
   const buttonAnim = useSpringEntrance(16, 16);
   const imageCardAnim = useSpringEntrance(6, 40);
 
-  // Subtle Ken Burns slow drift on image
   const imageScale = interpolate(frame, [0, 300], [1, 1.05], {
     extrapolateRight: 'clamp',
   });
@@ -440,17 +415,15 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
   const narrative1 =
     slide.visual.bullets?.[0] ||
     slide.narration.script.slice(0, Math.floor(slide.narration.script.length / 2)) ||
-    'We are committed to care that centers around your individual needs. From your first consultation to every follow-up, we ensure each service is delivered with attention, safety, and compassion. Your comfort and well-being are always our top concern.';
+    slide.visual.subtitle ||
+    'Comprehensive examination of core concepts, system architecture, and strategic objectives designed for scalable execution.';
 
   const narrative2 =
     slide.visual.bullets?.[1] ||
     slide.narration.script.slice(Math.floor(slide.narration.script.length / 2)) ||
-    slide.visual.subtitle ||
-    'Our approach is built on trust and personal connection. We take the time to understand your concerns, explain every step clearly, and make sure you feel confident in the care you receive. By placing your needs first, we create a supportive environment.';
+    'Our methodology emphasizes reliability, precision, and measurable performance at every layer of implementation.';
 
-  const imageSrc =
-    slide.visual.imageUrl ||
-    'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80';
+  const imageSrc = slide.visual.imageUrl || FALLBACK_IMAGE_DATA_URI;
 
   return (
     <AbsoluteFill
@@ -464,13 +437,13 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
         color: '#0f172a',
       }}
     >
-      <HeaderBar slideNumber="02 / 10" />
+      <HeaderBar badge={slide.visual.badge} />
 
       <main
         style={{
           width: '100%',
           height: '100%',
-          padding: '170px 96px 96px 96px',
+          padding: '160px 96px 80px 96px',
           display: 'grid',
           gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
           columnGap: '64px',
@@ -491,9 +464,9 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
           <h1
             style={{
               ...titleAnim,
-              fontSize: '82px',
-              fontWeight: 300,
-              lineHeight: 1.05,
+              fontSize: '76px',
+              fontWeight: 400,
+              lineHeight: 1.08,
               letterSpacing: '-0.03em',
               color: '#0a1b3f',
               margin: 0,
@@ -515,7 +488,7 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
 
           <div
             style={{
-              marginTop: '56px',
+              marginTop: '48px',
               display: 'grid',
               gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
               gap: '40px',
@@ -534,7 +507,7 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
             >
               <p style={{ margin: 0, fontWeight: 400 }}>{narrative1}</p>
 
-              <div style={{ ...buttonAnim, marginTop: '48px', display: 'flex', alignItems: 'center' }}>
+              <div style={{ ...buttonAnim, marginTop: '40px', display: 'flex', alignItems: 'center' }}>
                 <div
                   style={{
                     display: 'inline-flex',
@@ -544,12 +517,12 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
                     borderRadius: '9999px',
                     backgroundColor: '#0a1b3f',
                     color: '#ffffff',
-                    fontSize: '17px',
+                    fontSize: '16px',
                     fontWeight: 500,
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
                   }}
                 >
-                  <span>Next Page</span>
+                  <span>Explore Further</span>
                   <span style={{ fontSize: '18px' }}>→</span>
                 </div>
               </div>
@@ -584,7 +557,7 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
               position: 'relative',
             }}
           >
-            <img
+            <Img
               src={imageSrc}
               alt={slide.visual.title}
               style={{
@@ -593,7 +566,6 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
                 objectFit: 'cover',
                 objectPosition: 'center',
                 transform: `scale(${imageScale})`,
-                transition: 'transform 0.1s linear',
               }}
             />
             <div
@@ -609,7 +581,7 @@ export const TwoColumnSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> 
         </div>
       </main>
 
-      <FooterMeta />
+      <FooterMeta footerText={slide.visual.footerText} />
     </AbsoluteFill>
   );
 };
@@ -636,17 +608,16 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
 
   const mainMetric = slide.visual.metrics?.[0] || {
     value: slide.visual.highlightCard?.stat || '98%',
-    label: slide.visual.highlightCard?.title || 'Accuracy',
+    label: slide.visual.highlightCard?.title || 'System Accuracy',
   };
 
   const brandCardTitle =
     slide.visual.highlightCard?.text ||
     slide.visual.highlightCard?.subtitle ||
-    'Experience Meets Empathy';
+    slide.visual.badge ||
+    'Proven Reliability & Scale';
 
-  const imageSrc =
-    slide.visual.imageUrl ||
-    'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80';
+  const imageSrc = slide.visual.imageUrl || FALLBACK_IMAGE_DATA_URI;
 
   return (
     <AbsoluteFill
@@ -660,13 +631,13 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
         color: '#0f172a',
       }}
     >
-      <HeaderBar slideNumber="03 / 10" />
+      <HeaderBar badge={slide.visual.badge} />
 
       <main
         style={{
           width: '100%',
           height: '100%',
-          padding: '170px 96px 96px 96px',
+          padding: '160px 96px 80px 96px',
           display: 'grid',
           gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
           columnGap: '64px',
@@ -697,7 +668,7 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
               <h1
                 style={{
                   fontSize: '76px',
-                  fontWeight: 300,
+                  fontWeight: 400,
                   lineHeight: 1.08,
                   letterSpacing: '-0.03em',
                   color: '#0a1b3f',
@@ -733,18 +704,18 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
             <p
               style={{
                 ...narrativeAnim,
-                marginTop: '40px',
+                marginTop: '36px',
                 fontSize: '22px',
                 lineHeight: 1.7,
                 color: '#475569',
                 maxWidth: '820px',
                 fontWeight: 400,
-                margin: '40px 0 0 0',
+                margin: '36px 0 0 0',
               }}
             >
               {slide.narration.script ||
                 slide.visual.subtitle ||
-                'Our team of healthcare experts brings a combination of experience, continuous learning, and genuine care. Through collaboration and up-to-date training, we provide accurate diagnoses and personalized treatment plans.'}
+                'Empowering high-performance workflows through rigorous design, continuous testing, and verified operational benchmarks.'}
             </p>
           </div>
 
@@ -775,18 +746,18 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
             >
               <span
                 style={{
-                  fontSize: '15px',
+                  fontSize: '14px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
                   color: 'rgba(255, 255, 255, 0.6)',
                   fontWeight: 600,
                 }}
               >
-                Our Standard
+                Core Advantage
               </span>
               <p
                 style={{
-                  fontSize: '34px',
+                  fontSize: '32px',
                   fontWeight: 500,
                   lineHeight: 1.15,
                   color: '#ffffff',
@@ -816,14 +787,14 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
             >
               <span
                 style={{
-                  fontSize: '15px',
+                  fontSize: '14px',
                   textTransform: 'uppercase',
                   letterSpacing: '0.1em',
                   color: '#64748b',
                   fontWeight: 600,
                 }}
               >
-                Reliability
+                Benchmark
               </span>
               <div>
                 <h2
@@ -876,7 +847,7 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
               position: 'relative',
             }}
           >
-            <img
+            <Img
               src={imageSrc}
               alt={slide.visual.title}
               style={{
@@ -885,7 +856,6 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
                 objectFit: 'cover',
                 objectPosition: 'center',
                 transform: `scale(${imageScale})`,
-                transition: 'transform 0.1s linear',
               }}
             />
             <div
@@ -901,13 +871,13 @@ export const StatHighlightSlide: React.FC<{ slide: SlideData; theme: ThemeConfig
         </div>
       </main>
 
-      <FooterMeta />
+      <FooterMeta footerText={slide.visual.footerText} />
     </AbsoluteFill>
   );
 };
 
 // ============================================================================
-// SLIDE 4: PATIENT-CENTERED / DUAL IMAGE STACK (ImageContentSlide)
+// SLIDE 4: DUAL IMAGE STACK (ImageContentSlide)
 // ============================================================================
 
 export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
@@ -927,15 +897,12 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
   });
 
   const mainMetric = slide.visual.metrics?.[0] || {
-    value: '89%',
-    label: 'Satisfaction',
+    value: '94%',
+    label: 'Efficiency',
   };
 
-  const image1 =
-    slide.visual.imageUrl ||
-    'https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80';
-  const image2 =
-    'https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1200&q=80';
+  const image1 = slide.visual.imageUrl || FALLBACK_IMAGE_DATA_URI;
+  const image2 = slide.visual.secondaryImageUrl || slide.visual.imageUrl || FALLBACK_IMAGE_DATA_URI;
 
   return (
     <AbsoluteFill
@@ -949,13 +916,13 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
         color: '#0f172a',
       }}
     >
-      <HeaderBar slideNumber="04 / 10" />
+      <HeaderBar badge={slide.visual.badge} />
 
       <main
         style={{
           width: '100%',
           height: '100%',
-          padding: '170px 96px 96px 96px',
+          padding: '160px 96px 80px 96px',
           display: 'grid',
           gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
           columnGap: '64px',
@@ -986,7 +953,7 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
               <h1
                 style={{
                   fontSize: '76px',
-                  fontWeight: 300,
+                  fontWeight: 400,
                   lineHeight: 1.08,
                   letterSpacing: '-0.03em',
                   color: '#0a1b3f',
@@ -1027,22 +994,22 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
             <p
               style={{
                 ...narrativeAnim,
-                marginTop: '40px',
+                marginTop: '36px',
                 fontSize: '22px',
                 lineHeight: 1.75,
                 color: '#475569',
                 maxWidth: '800px',
                 fontWeight: 400,
-                margin: '40px 0 0 0',
+                margin: '36px 0 0 0',
               }}
             >
               {slide.narration.script ||
                 slide.visual.subtitle ||
-                'You are at the heart of every decision we make. We take time to listen, understand your goals, and adjust our care to match your lifestyle. This personalized approach helps build trust and ensures that every step of your journey feels right for you.'}
+                'Delivering seamless end-to-end integration designed to maximize output, reduce overhead, and ensure consistent excellence.'}
             </p>
           </div>
 
-          {/* Metric Highlight Card: 89% Satisfaction */}
+          {/* Metric Highlight Card */}
           <div
             style={{
               ...metricCardAnim,
@@ -1067,7 +1034,7 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
                 fontWeight: 600,
               }}
             >
-              Feedback Score
+              Performance Metric
             </span>
             <div style={{ marginTop: '16px' }}>
               <h2
@@ -1122,9 +1089,9 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
               backgroundColor: '#e2e8f0',
             }}
           >
-            <img
+            <Img
               src={image1}
-              alt="Consultation"
+              alt="Visual asset"
               style={{
                 width: '100%',
                 height: '100%',
@@ -1158,9 +1125,9 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
               backgroundColor: '#e2e8f0',
             }}
           >
-            <img
+            <Img
               src={image2}
-              alt="Hands-on care"
+              alt="Detail asset"
               style={{
                 width: '100%',
                 height: '100%',
@@ -1182,7 +1149,7 @@ export const ImageContentSlide: React.FC<{ slide: SlideData; theme: ThemeConfig 
         </div>
       </main>
 
-      <FooterMeta />
+      <FooterMeta footerText={slide.visual.footerText} />
     </AbsoluteFill>
   );
 };
@@ -1199,32 +1166,39 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
 
   const titleAnim = useSpringEntrance(2, 32);
 
-  const pillars =
+  // Dynamically map cards from slide.visual.cards OR slide.visual.bullets!
+  const rawCards =
     slide.visual.cards && slide.visual.cards.length > 0
-      ? slide.visual.cards
-      : [
-          {
-            id: '01',
-            title: 'Modern Equipment',
-            description:
-              slide.visual.bullets?.[0] ||
-              'Modern equipment helps deliver quick diagnostic outcomes, reducing waiting time for treatment.',
-          },
-          {
-            id: '02',
-            title: 'Advanced Precision',
-            description:
-              slide.visual.bullets?.[1] ||
-              'Advanced tools provide precise data that lead to more effective and personalized care plans.',
-          },
-          {
-            id: '03',
-            title: 'Early Intervention',
-            description:
-              slide.visual.bullets?.[2] ||
-              'Timely identification of potential issues allows for earlier intervention and better health outcomes.',
-          },
-        ];
+      ? slide.visual.cards.map((c, i) => ({
+          tag: c.tag || `0${i + 1}`,
+          title: c.title,
+          description: c.description,
+        }))
+      : slide.visual.bullets && slide.visual.bullets.length > 0
+        ? slide.visual.bullets.map((b, i) => ({
+            tag: `0${i + 1}`,
+            title: `Key Pillar 0${i + 1}`,
+            description: b,
+          }))
+        : [
+            {
+              tag: '01',
+              title: 'Strategic Foundation',
+              description: 'Establishing robust architecture and baseline protocols for scalable execution.',
+            },
+            {
+              tag: '02',
+              title: 'Automated Operations',
+              description: 'Leveraging modern toolchains to accelerate delivery cycles and reduce friction.',
+            },
+            {
+              tag: '03',
+              title: 'Continuous Verification',
+              description: 'Rigorous monitoring and validation to ensure sustained reliability and quality.',
+            },
+          ];
+
+  const pillars = rawCards.slice(0, 3);
 
   return (
     <AbsoluteFill
@@ -1238,13 +1212,13 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
         color: '#0f172a',
       }}
     >
-      <HeaderBar slideNumber="05 / 10" />
+      <HeaderBar badge={slide.visual.badge} />
 
       <main
         style={{
           width: '100%',
           height: '100%',
-          padding: '170px 96px 96px 96px',
+          padding: '160px 96px 80px 96px',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
@@ -1256,7 +1230,7 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
             style={{
               ...titleAnim,
               fontSize: '76px',
-              fontWeight: 300,
+              fontWeight: 400,
               lineHeight: 1.08,
               letterSpacing: '-0.03em',
               color: '#0a1b3f',
@@ -1287,7 +1261,7 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
             marginBottom: '32px',
           }}
         >
-          {pillars.slice(0, 3).map((pillar, idx) => {
+          {pillars.map((pillar, idx) => {
             const cardProgress = spring({
               frame: frame - (6 + idx * 6),
               fps,
@@ -1341,18 +1315,33 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
                 </div>
 
                 {/* Card Copy */}
-                <p
-                  style={{
-                    fontSize: '24px',
-                    lineHeight: 1.65,
-                    fontWeight: 400,
-                    color: '#334155',
-                    letterSpacing: '-0.01em',
-                    margin: 0,
-                  }}
-                >
-                  {pillar.description || (pillar as any).text}
-                </p>
+                <div>
+                  {pillar.title && pillar.title !== `Key Pillar 0${idx + 1}` && (
+                    <h3
+                      style={{
+                        fontSize: '26px',
+                        fontWeight: 600,
+                        color: '#0a1b3f',
+                        margin: '0 0 12px 0',
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {pillar.title}
+                    </h3>
+                  )}
+                  <p
+                    style={{
+                      fontSize: '22px',
+                      lineHeight: 1.6,
+                      fontWeight: 400,
+                      color: '#334155',
+                      letterSpacing: '-0.01em',
+                      margin: 0,
+                    }}
+                  >
+                    {pillar.description}
+                  </p>
+                </div>
 
                 {/* Bottom Index Accent */}
                 <div
@@ -1364,7 +1353,7 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
                     textTransform: 'uppercase',
                   }}
                 >
-                  Phase 0{idx + 1}
+                  Phase {pillar.tag || `0${idx + 1}`}
                 </div>
               </div>
             );
@@ -1372,13 +1361,13 @@ export const CardGridSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> =
         </div>
       </main>
 
-      <FooterMeta />
+      <FooterMeta footerText={slide.visual.footerText} />
     </AbsoluteFill>
   );
 };
 
 // ============================================================================
-// SLIDE 10: OUTRO / THANK YOU SLIDE (Deep Silk Navy Bookend)
+// SLIDE 10: OUTRO / SUMMARY SLIDE (Deep Silk Navy Bookend)
 // ============================================================================
 
 export const ConclusionSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }> = ({
@@ -1391,6 +1380,11 @@ export const ConclusionSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }>
   const arrowAnim = useSpringEntrance(6, 16);
   const subAnim = useSpringEntrance(12, 24);
   const footAnim = useSpringEntrance(16, 16);
+
+  const words = slide.visual.title.trim().split(/\s+/);
+  const mid = Math.ceil(words.length / 2);
+  const line1 = words.length > 1 ? words.slice(0, mid).join(' ') : words[0] || 'Thank';
+  const line2 = words.length > 1 ? words.slice(mid).join(' ') : (words[0] === 'Thank' ? 'You' : '');
 
   const t1Progress = spring({
     frame: frame - 4,
@@ -1473,33 +1467,29 @@ export const ConclusionSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }>
             ...headerAnim,
             display: 'flex',
             justifyContent: 'space-between',
-            alignItems: 'flex-start',
+            alignItems: 'center',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            <h2
-              style={{
-                fontSize: '34px',
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-                color: 'rgba(255, 255, 255, 0.95)',
-                margin: 0,
-                lineHeight: 1.2,
-              }}
-            >
-              Borcelle Hospital
-            </h2>
-            <p
-              style={{
-                fontSize: '20px',
-                fontWeight: 300,
-                letterSpacing: '0.02em',
-                color: 'rgba(255, 255, 255, 0.7)',
-                margin: 0,
-              }}
-            >
-              Care at Every Step
-            </p>
+          <div>
+            {slide.visual.badge && (
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '8px 20px',
+                  borderRadius: '9999px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.12)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  color: '#ffffff',
+                }}
+              >
+                {slide.visual.badge}
+              </div>
+            )}
           </div>
 
           <div
@@ -1524,87 +1514,79 @@ export const ConclusionSlide: React.FC<{ slide: SlideData; theme: ThemeConfig }>
           <div style={{ overflow: 'hidden' }}>
             <h1
               style={{
-                fontSize: '128px',
-                fontWeight: 500,
+                fontSize: line2 ? '110px' : '124px',
+                fontWeight: 600,
                 letterSpacing: '-0.035em',
-                lineHeight: 0.95,
+                lineHeight: 1.0,
                 color: '#ffffff',
                 margin: 0,
                 transform: `translate3d(0, ${t1Y}px, 0)`,
               }}
             >
-              Thank
+              {line1}
             </h1>
           </div>
-          <div style={{ overflow: 'hidden' }}>
-            <h1
+          {line2 && (
+            <div style={{ overflow: 'hidden', marginTop: '8px' }}>
+              <h1
+                style={{
+                  fontSize: '110px',
+                  fontWeight: 600,
+                  letterSpacing: '-0.035em',
+                  lineHeight: 1.0,
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  margin: 0,
+                  transform: `translate3d(0, ${t2Y}px, 0)`,
+                }}
+              >
+                {line2}
+              </h1>
+            </div>
+          )}
+          {slide.visual.subtitle && (
+            <p
               style={{
-                fontSize: '128px',
-                fontWeight: 500,
-                letterSpacing: '-0.035em',
-                lineHeight: 0.95,
-                color: 'rgba(255, 255, 255, 0.9)',
-                margin: 0,
-                transform: `translate3d(0, ${t2Y}px, 0)`,
+                ...subAnim,
+                marginTop: '36px',
+                fontSize: '26px',
+                fontWeight: 400,
+                letterSpacing: '0.01em',
+                color: 'rgba(255, 255, 255, 0.8)',
+                margin: '36px 0 0 0',
+                maxWidth: '900px',
+                lineHeight: 1.4,
               }}
             >
-              You
-            </h1>
-          </div>
-          <p
+              {slide.visual.subtitle}
+            </p>
+          )}
+        </div>
+
+        {slide.visual.footerText ? (
+          <div
             style={{
-              ...subAnim,
-              marginTop: '32px',
-              fontSize: '26px',
-              fontWeight: 400,
-              letterSpacing: '0.02em',
-              color: 'rgba(255, 255, 255, 0.75)',
-              margin: '32px 0 0 0',
+              ...footAnim,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-end',
+              borderTop: '1px solid rgba(255, 255, 255, 0.15)',
+              paddingTop: '28px',
+              fontSize: '16px',
+              color: 'rgba(255, 255, 255, 0.7)',
             }}
           >
-            {slide.visual.subtitle || 'Compassionate Care at Every Step'}
-          </p>
-        </div>
-
-        <div
-          style={{
-            ...footAnim,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'flex-end',
-            borderTop: '1px solid rgba(255, 255, 255, 0.15)',
-            paddingTop: '32px',
-            fontSize: '18px',
-            letterSpacing: '0.02em',
-            color: 'rgba(255, 255, 255, 0.7)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <span style={{ fontWeight: 600, color: 'rgba(255, 255, 255, 0.9)' }}>Borcelle</span>
-            <span
-              style={{
-                width: '4px',
-                height: '4px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255, 255, 255, 0.4)',
-              }}
-            />
-            <span>2025</span>
+            <span>{slide.visual.footerText}</span>
           </div>
-
-          <div>
-            <span style={{ color: 'rgba(255, 255, 255, 0.6)', fontWeight: 500 }}>
-              {slide.visual.footerText || 'Healthcare Presentation'}
-            </span>
-          </div>
-        </div>
+        ) : (
+          <div style={{ height: '24px' }} />
+        )}
       </div>
     </AbsoluteFill>
   );
 };
 
 // ============================================================================
-// MAIN DISPATCHER COMPONENT (Healthcare Borcelle Template)
+// MAIN DISPATCHER COMPONENT
 // ============================================================================
 
 export const HealthcareSlideRenderer: React.FC<{

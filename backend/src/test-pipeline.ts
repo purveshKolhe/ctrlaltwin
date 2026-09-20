@@ -13,7 +13,9 @@ async function runTest() {
 
   const job: GenerationJob = {
     id: `test-${Date.now()}`,
-    prompt: 'Minimally Invasive Robotic Surgery and Precision Medicine',
+    prompt:
+      process.argv[2] ||
+      'Next-Generation Autonomous Drones and Aerial Robotics: Transforming Logistics and Urban Mobility',
     templateId: 'healthcare-borcelle-new',
     status: 'pending',
     progress: 0,

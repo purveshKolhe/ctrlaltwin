@@ -192,14 +192,14 @@ export class PresentationPipeline {
       job.metrics.totalTimeSeconds = Number(((Date.now() - startTime) / 1000).toFixed(2));
 
       addLog(`🎉 Video render finished in ${renderResult.renderTimeSeconds}s (Avg ${renderResult.avgFps} fps).`);
-      addLog(`📁 Final MP4 saved: ${videoOutputPath}`);
+      addLog(`📁 Final MP4: ${renderResult.outputPath || videoOutputPath}`);
       addLog(`🏁 Total pipeline duration: ${job.metrics.totalTimeSeconds}s.`);
 
       // Completed
       update({
         status: 'completed',
         progress: 100,
-        videoPath: videoOutputPath,
+        videoPath: renderResult.outputPath || videoOutputPath,
       });
 
       return job;
