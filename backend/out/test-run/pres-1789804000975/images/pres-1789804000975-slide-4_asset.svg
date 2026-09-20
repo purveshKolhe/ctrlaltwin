@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="50%" stop-color="#1e293b" />
+      <stop offset="100%" stop-color="#090d16" />
+    </linearGradient>
+    <linearGradient id="accent-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#818cf8" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="800" height="600" rx="24" fill="url(#bg-grad)" stroke="#38bdf840" stroke-width="2"/>
+  
+  <!-- Subtle grid pattern -->
+  <g stroke="#ffffff10" stroke-width="1">
+    <line x1="0" y1="150" x2="800" y2="150"/>
+    <line x1="0" y1="300" x2="800" y2="300"/>
+    <line x1="0" y1="450" x2="800" y2="450"/>
+    <line x1="200" y1="0" x2="200" y2="600"/>
+    <line x1="400" y1="0" x2="400" y2="600"/>
+    <line x1="600" y1="0" x2="600" y2="600"/>
+  </g>
+
+  <!-- Central Visual Node -->
+  <circle cx="400" cy="270" r="80" fill="url(#accent-grad)" opacity="0.15"/>
+  <circle cx="400" cy="270" r="50" fill="none" stroke="url(#accent-grad)" stroke-width="3" stroke-dasharray="6,4"/>
+  <circle cx="400" cy="270" r="24" fill="url(#accent-grad)"/>
+
+  <!-- Satellite Nodes -->
+  <circle cx="260" cy="220" r="14" fill="#38bdf8" opacity="0.8"/>
+  <circle cx="540" cy="220" r="14" fill="#818cf8" opacity="0.8"/>
+  <circle cx="320" cy="360" r="10" fill="#38bdf8" opacity="0.6"/>
+  <circle cx="480" cy="360" r="10" fill="#818cf8" opacity="0.6"/>
+
+  <line x1="400" y1="270" x2="260" y2="220" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="400" y1="270" x2="540" y2="220" stroke="#818cf8" stroke-width="2" stroke-dasharray="4,4"/>
+  <line x1="400" y1="270" x2="320" y2="360" stroke="#38bdf8" stroke-width="1.5"/>
+  <line x1="400" y1="270" x2="480" y2="360" stroke="#818cf8" stroke-width="1.5"/>
+
+  <!-- Prompt Label text -->
+  <rect x="60" y="480" width="680" height="70" rx="14" fill="#00000060" stroke="#ffffff15"/>
+  <text x="400" y="522" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="16" text-anchor="middle">
+    AI Visual Representation
+  </text>
+</svg>
