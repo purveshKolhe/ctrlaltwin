@@ -13,16 +13,20 @@ export const TitleSlide: React.FC<TitleSlideProps> = ({ slide, theme }) => {
   const { fps } = useVideoConfig();
   const { title, subtitle, badge } = slide.visual;
 
-  // Staggered spring animations
-  const badgeSpring = spring({ frame: frame - 2, fps, config: { damping: 15 } });
-  const titleSpring = spring({ frame: frame - 8, fps, config: { damping: 14 } });
-  const subSpring = spring({ frame: frame - 16, fps, config: { damping: 14 } });
-  const barWidth = interpolate(frame, [10, 35], [0, 160], {
+  // Apple-style sleek springs (clean transform & opacity without heavy blur)
+  const badgeSpring = spring({ frame: frame - 2, fps, config: { damping: 22, mass: 0.8 } });
+  const titleSpring = spring({ frame: frame - 5, fps, config: { damping: 22, mass: 0.8 } });
+  const subSpring = spring({ frame: frame - 12, fps, config: { damping: 22, mass: 0.8 } });
+
+  const titleY = interpolate(titleSpring, [0, 1], [30, 0]);
+  const subY = interpolate(subSpring, [0, 1], [20, 0]);
+
+  const barWidth = interpolate(frame, [6, 28], [0, 140], {
     extrapolateRight: 'clamp',
   });
 
   return (
-    <SlideWrapper theme={theme} audioPath={slide.narration.audioPath}>
+    <SlideWrapper theme={theme} audioPath={slide.narration.audioPath} freezeFrame={35}>
       <div
         style={{
           flex: 1,
@@ -30,55 +34,64 @@ export const TitleSlide: React.FC<TitleSlideProps> = ({ slide, theme }) => {
           flexDirection: 'column',
           justifyContent: 'center',
           alignItems: 'flex-start',
-          maxWidth: '1200px',
+          maxWidth: '1350px',
         }}
       >
-        {/* Optional Topic Badge */}
+        {/* Apple-style clean status pill badge */}
         {badge && (
           <div
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              padding: '8px 20px',
+              gap: '10px',
+              padding: '8px 22px',
               borderRadius: '9999px',
-              backgroundColor: `${theme.primaryColor}20`,
-              border: `1px solid ${theme.primaryColor}50`,
-              color: theme.primaryColor,
-              fontSize: '22px',
+              backgroundColor: `${theme.primaryColor}14`,
+              border: `1px solid ${theme.primaryColor}35`,
+              fontSize: '20px',
               fontWeight: 600,
+              letterSpacing: '0.06em',
               textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              marginBottom: '28px',
+              color: theme.primaryColor,
+              marginBottom: '32px',
               opacity: badgeSpring,
               transform: `translateY(${interpolate(badgeSpring, [0, 1], [15, 0])}px)`,
             }}
           >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: theme.primaryColor,
+              }}
+            />
             {badge}
           </div>
         )}
 
-        {/* Accent Bar */}
+        {/* Accent expanding line */}
         <div
           style={{
-            height: '6px',
+            height: '4px',
             width: `${barWidth}px`,
-            borderRadius: '3px',
+            borderRadius: '2px',
             background: `linear-gradient(90deg, ${theme.primaryColor}, ${theme.secondaryColor})`,
-            marginBottom: '32px',
+            marginBottom: '36px',
           }}
         />
 
-        {/* Main Presentation Title */}
+        {/* Crisp high-contrast Title */}
         <h1
           style={{
-            fontSize: '76px',
+            fontSize: '84px',
             fontWeight: 800,
-            lineHeight: 1.15,
-            margin: '0 0 24px 0',
-            letterSpacing: '-0.03em',
+            lineHeight: 1.12,
+            margin: '0 0 28px 0',
+            letterSpacing: '-0.04em',
             color: theme.textColor,
             opacity: titleSpring,
-            transform: `translateY(${interpolate(titleSpring, [0, 1], [30, 0])}px)`,
+            transform: `translateY(${titleY}px)`,
           }}
         >
           {title}
@@ -90,12 +103,13 @@ export const TitleSlide: React.FC<TitleSlideProps> = ({ slide, theme }) => {
             style={{
               fontSize: '32px',
               fontWeight: 400,
-              lineHeight: 1.4,
+              lineHeight: 1.45,
               margin: 0,
               color: theme.textMutedColor,
-              maxWidth: '950px',
+              maxWidth: '1100px',
+              letterSpacing: '-0.01em',
               opacity: subSpring,
-              transform: `translateY(${interpolate(subSpring, [0, 1], [25, 0])}px)`,
+              transform: `translateY(${subY}px)`,
             }}
           >
             {subtitle}

@@ -150,11 +150,40 @@ function normalizeManifest(raw: any, presId: string, templateId: string): any {
     const s = { ...slide };
     s.id = s.id || `${presId}-slide-${idx + 1}`;
 
-    const validTypes = ['title', 'bullet-list', 'stat-chart', 'image-content', 'quote'];
-    s.type = validTypes.includes(s.type) ? s.type : (idx === 0 ? 'title' : 'bullet-list');
+    const validTypes = [
+      'title',
+      'two-column',
+      'card-grid',
+      'bullet-list',
+      'stat-chart',
+      'image-content',
+      'quote',
+      'conclusion',
+    ];
+    s.type = validTypes.includes(s.type) ? s.type : (idx === 0 ? 'title' : 'two-column');
 
     s.visual = s.visual || {};
     s.visual.title = s.visual.title || s.visual.quote || s.visual.subtitle || `Key Insights ${idx + 1}`;
+
+    // Normalize cards: if array, ensure title and description
+    if (Array.isArray(s.visual.cards)) {
+      s.visual.cards = s.visual.cards.map((c: any, cIdx: number) => ({
+        title: typeof c === 'string' ? c : (c.title || `Pillar 0${cIdx + 1}`),
+        description: typeof c === 'string' ? '' : (c.description || c.text || ''),
+        tag: c.tag || undefined,
+        icon: c.icon || undefined,
+      }));
+    }
+
+    // Normalize highlightCard: ensure title exists
+    if (s.visual.highlightCard && typeof s.visual.highlightCard === 'object') {
+      s.visual.highlightCard = {
+        title: s.visual.highlightCard.title || 'Key Highlight',
+        subtitle: s.visual.highlightCard.subtitle || undefined,
+        stat: s.visual.highlightCard.stat || undefined,
+        text: s.visual.highlightCard.text || undefined,
+      };
+    }
 
     // Normalize chartData: if object, convert to array
     if (s.visual.chartData && typeof s.visual.chartData === 'object' && !Array.isArray(s.visual.chartData)) {
@@ -204,7 +233,7 @@ export class GroqProvider implements ILLMProvider {
     prompt: string,
     options?: ScriptGenerationOptions
   ): Promise<PresentationManifest> {
-    const templateId = options?.templateId || 'tech-modern-dark';
+    const templateId = options?.templateId || 'healthcare-modern-blue';
     const targetSlideCount = options?.targetSlideCount || 5;
     const presId = `pres-${Date.now()}`;
 
@@ -224,21 +253,32 @@ export class GroqProvider implements ILLMProvider {
     }
 
     const systemPrompt = `You are an expert presentation designer and video director.
-Your task is to transform the user's input (and any attached document content) into a concise, high-impact presentation video script.
+Your task is to transform the user's input (and any attached document content) into a concise, high-impact presentation video script with rich slide layout variety.
 
 IMPORTANT GUIDELINES:
-1. CONCISENESS (CRITICAL FOR TOKEN LIMITS):
-   - Create exactly 4 slides total:
-     Slide 1: 'title'
-     Slide 2: 'bullet-list' (3 concise bullets, under 8 words each)
-     Slide 3: 'stat-chart' (2-3 metrics or chartData items)
-     Slide 4: 'quote' or 'image-content'
+1. SLIDE VARIETY & NARRATIVE PACING:
+   - Create 4 to 5 slides tailored to the topic. Do NOT use the same generic slide sequence for every presentation.
+   - Dynamically select from these 8 layout types:
+     * 'title': Opening slide with title, subtitle, and badge (e.g., "Borcelle Hospital", "Keynote 2026").
+     * 'two-column': Left column narrative context + Right column clinical highlight card (with stat like "98% Accuracy" and title/text).
+     * 'card-grid': 3 feature or service cards (cards: [{ title, description, tag }]).
+     * 'stat-chart': Visual metrics or bar chart (metrics: [{ label, value, subtext }], chartData: [{ label, value }]).
+     * 'bullet-list': 3 concise bullet points (under 10 words each).
+     * 'image-content': Explaining a visual concept with an imagePrompt.
+     * 'quote': Memorable testimonial, philosophy, or clinical quote with author.
+     * 'conclusion': "Thank You" closing slide with summary badge and footerText.
+   - Example diverse sequences:
+     - Sequence A: 'title' -> 'two-column' -> 'card-grid' -> 'stat-chart' -> 'conclusion'
+     - Sequence B: 'title' -> 'card-grid' -> 'two-column' -> 'quote' -> 'conclusion'
+     - Sequence C: 'title' -> 'two-column' -> 'stat-chart' -> 'bullet-list' -> 'conclusion'
+
+2. CONCISENESS (CRITICAL FOR TOKEN LIMITS):
    - Visual text: brief, punchy phrases.
    - Narration script: exactly 1 to 2 spoken sentences per slide. Do not write long paragraphs.
 
-2. SEPARATION OF CONCERNS:
-   - visual: On-screen titles, bullets, metrics, or charts.
-   - narration.script: Natural, conversational spoken prose for a voiceover actor. If visual contains equations or symbols, spell them out phonetically (e.g., "E equals m c squared").
+3. SEPARATION OF CONCERNS:
+   - visual: On-screen titles, bullets, cards, metrics, or charts.
+   - narration.script: Natural, conversational spoken prose for a voiceover actor. If visual contains equations or symbols, spell them out phonetically.
 
 Return ONLY a valid JSON object matching this structure (no markdown formatting):
 {

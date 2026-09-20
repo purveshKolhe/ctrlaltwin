@@ -1,12 +1,15 @@
 import { z } from 'zod';
 
-// Slide Types
+// Slide Types supporting diverse presentation formats
 export const SlideTypeEnum = z.enum([
   'title',
+  'two-column',
+  'card-grid',
   'bullet-list',
   'stat-chart',
   'image-content',
   'quote',
+  'conclusion',
 ]);
 export type SlideType = z.infer<typeof SlideTypeEnum>;
 
@@ -26,11 +29,29 @@ export const MetricItemSchema = z.object({
 });
 export type MetricItem = z.infer<typeof MetricItemSchema>;
 
+// Feature Card Schema (for Card-Grid slides)
+export const FeatureCardSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  tag: z.string().optional(),
+  icon: z.string().optional(),
+});
+export type FeatureCard = z.infer<typeof FeatureCardSchema>;
+
+// Highlight Card Schema (for Two-Column slides)
+export const HighlightCardSchema = z.object({
+  title: z.string(),
+  subtitle: z.string().optional(),
+  stat: z.string().optional(),
+  text: z.string().optional(),
+});
+export type HighlightCard = z.infer<typeof HighlightCardSchema>;
+
 // Resilient Visual Content Schema
 export const VisualContentSchema = z.object({
   title: z
-    .preprocess((val) => (typeof val === 'string' && val.trim() ? val : 'Summary'), z.string())
-    .default('Summary'),
+    .preprocess((val) => (typeof val === 'string' && val.trim() ? val : 'Overview'), z.string())
+    .default('Overview'),
   subtitle: z.string().optional(),
   badge: z.string().optional(),
   bullets: z.array(z.string()).optional(),
@@ -57,10 +78,13 @@ export const VisualContentSchema = z.object({
     }, z.array(ChartItemSchema).optional())
     .optional(),
   chartType: z.enum(['bar', 'comparison']).optional(),
+  cards: z.array(FeatureCardSchema).optional(),
+  highlightCard: HighlightCardSchema.optional(),
   imagePrompt: z.string().optional(),
   imageUrl: z.string().optional(),
   quote: z.string().optional(),
   author: z.string().optional(),
+  footerText: z.string().optional(),
 });
 export type VisualContent = z.infer<typeof VisualContentSchema>;
 

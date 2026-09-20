@@ -13,13 +13,11 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
   const { fps } = useVideoConfig();
   const { title, subtitle, chartData = [], metrics = [] } = slide.visual;
 
-  const headerSpring = spring({ frame, fps, config: { damping: 14 } });
-
-  // Calculate maximum value for chart scaling
+  const headerSpring = spring({ frame, fps, config: { damping: 22, mass: 0.8 } });
   const maxChartValue = Math.max(...chartData.map((d) => d.value), 1);
 
   return (
-    <SlideWrapper theme={theme} audioPath={slide.narration.audioPath}>
+    <SlideWrapper theme={theme} audioPath={slide.narration.audioPath} freezeFrame={45}>
       <div
         style={{
           display: 'flex',
@@ -32,13 +30,13 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
         <div>
           <h2
             style={{
-              fontSize: '52px',
+              fontSize: '56px',
               fontWeight: 800,
               margin: '0 0 16px 0',
-              letterSpacing: '-0.02em',
+              letterSpacing: '-0.03em',
               color: theme.textColor,
               opacity: headerSpring,
-              transform: `translateY(${interpolate(headerSpring, [0, 1], [20, 0])}px)`,
+              transform: `translateY(${interpolate(headerSpring, [0, 1], [25, 0])}px)`,
             }}
           >
             {title}
@@ -57,21 +55,21 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
           )}
         </div>
 
-        {/* Metric Cards (if present) */}
+        {/* Big Metric Callouts (Directly modeled on Borcelle Hospital 98% Accuracy style) */}
         {metrics.length > 0 && (
           <div
             style={{
               display: 'grid',
               gridTemplateColumns: `repeat(${metrics.length}, 1fr)`,
               gap: '32px',
-              margin: '40px 0',
+              margin: '36px 0',
             }}
           >
             {metrics.map((metric, idx) => {
               const cardSpring = spring({
-                frame: frame - (15 + idx * 10),
+                frame: frame - (8 + idx * 6),
                 fps,
-                config: { damping: 14 },
+                config: { damping: 20, mass: 0.85 },
               });
 
               return (
@@ -79,25 +77,27 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
                   key={idx}
                   style={{
                     backgroundColor: theme.surfaceColor,
-                    border: `1px solid ${theme.primaryColor}30`,
-                    borderRadius: '20px',
-                    padding: '36px 32px',
+                    border: `1px solid ${theme.primaryColor}25`,
+                    borderRadius: '24px',
+                    padding: '38px 32px',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
                     textAlign: 'center',
+                    boxShadow: '0 10px 30px rgba(0,0,0,0.06)',
                     opacity: cardSpring,
-                    transform: `translateY(${interpolate(cardSpring, [0, 1], [30, 0])}px)`,
+                    transform: `translateY(${interpolate(cardSpring, [0, 1], [25, 0])}px)`,
                   }}
                 >
                   <span
                     style={{
-                      fontSize: '64px',
-                      fontWeight: 800,
+                      fontSize: '76px',
+                      fontWeight: 900,
+                      letterSpacing: '-0.04em',
                       color: theme.primaryColor,
                       lineHeight: 1.1,
-                      marginBottom: '12px',
+                      marginBottom: '14px',
                     }}
                   >
                     {metric.value}
@@ -107,6 +107,7 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
                       fontSize: '24px',
                       fontWeight: 600,
                       color: theme.textColor,
+                      letterSpacing: '-0.01em',
                       marginBottom: '6px',
                     }}
                   >
@@ -128,7 +129,7 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
           </div>
         )}
 
-        {/* Animated Bar Chart (if present) */}
+        {/* Animated Bar Chart */}
         {chartData.length > 0 && (
           <div
             style={{
@@ -136,20 +137,21 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
               display: 'flex',
               alignItems: 'flex-end',
               justifyContent: 'space-around',
-              padding: '40px 60px 20px 60px',
+              padding: '40px 60px 24px 60px',
               backgroundColor: theme.surfaceColor,
               borderRadius: '24px',
               border: `1px solid ${theme.primaryColor}20`,
-              maxHeight: '420px',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.05)',
+              maxHeight: '400px',
               boxSizing: 'border-box',
-              gap: '40px',
+              gap: '48px',
             }}
           >
             {chartData.map((item, idx) => {
               const barSpring = spring({
-                frame: frame - (20 + idx * 10),
+                frame: frame - (10 + idx * 6),
                 fps,
-                config: { damping: 15, stiffness: 80 },
+                config: { damping: 20, mass: 0.85, stiffness: 85 },
               });
 
               const targetHeightPercent = (item.value / maxChartValue) * 100;
@@ -168,39 +170,40 @@ export const ChartSlide: React.FC<ChartSlideProps> = ({ slide, theme }) => {
                     justifyContent: 'flex-end',
                   }}
                 >
-                  {/* Animated Value Label */}
+                  {/* Value Label */}
                   <span
                     style={{
-                      fontSize: '28px',
-                      fontWeight: 700,
+                      fontSize: '30px',
+                      fontWeight: 800,
                       color: theme.textColor,
-                      marginBottom: '12px',
+                      marginBottom: '14px',
+                      letterSpacing: '-0.02em',
                       opacity: barSpring,
                     }}
                   >
                     {Math.round(item.value * barSpring)}
                   </span>
 
-                  {/* The Bar */}
+                  {/* Clean Bar */}
                   <div
                     style={{
                       width: '100%',
-                      maxWidth: '120px',
+                      maxWidth: '130px',
                       height: `${animatedHeight}%`,
                       backgroundColor: barColor,
-                      borderRadius: '12px 12px 0 0',
-                      boxShadow: `0 0 20px ${barColor}40`,
+                      borderRadius: '16px 16px 0 0',
                     }}
                   />
 
-                  {/* The Label */}
+                  {/* Category Label */}
                   <span
                     style={{
                       fontSize: '22px',
                       fontWeight: 600,
                       color: theme.textMutedColor,
-                      marginTop: '16px',
+                      marginTop: '18px',
                       textAlign: 'center',
+                      letterSpacing: '-0.01em',
                     }}
                   >
                     {item.label}
