@@ -1,6 +1,19 @@
 import { ThemeConfig } from '../types/presentation';
 
 export const THEMES: Record<string, ThemeConfig> = {
+  'healthcare-borcelle-new': {
+    id: 'healthcare-borcelle-new',
+    name: 'Borcelle Hospital Medical (New - Canva PDF)',
+    backgroundColor: '#f1f5f9',
+    surfaceColor: '#ffffff',
+    primaryColor: '#0284c7',
+    secondaryColor: '#0d9488',
+    textColor: '#0b112c',
+    textMutedColor: '#475569',
+    accentColor: '#1d4ed8',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  },
   'healthcare-modern-blue': {
     id: 'healthcare-modern-blue',
     name: 'Healthcare Modern Blue (Clean Light - Borcelle PDF)',
@@ -51,7 +64,7 @@ export const THEMES: Record<string, ThemeConfig> = {
   },
 };
 
-export const DEFAULT_THEME = THEMES['healthcare-modern-blue'];
+export const DEFAULT_THEME = THEMES['healthcare-borcelle-new'];
 
 export function getTheme(themeId?: string): ThemeConfig {
   if (!themeId || !THEMES[themeId]) {

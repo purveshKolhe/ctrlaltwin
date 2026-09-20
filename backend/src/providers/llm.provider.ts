@@ -154,6 +154,7 @@ function normalizeManifest(raw: any, presId: string, templateId: string): any {
       'title',
       'two-column',
       'card-grid',
+      'stat-highlight',
       'bullet-list',
       'stat-chart',
       'image-content',
@@ -233,7 +234,7 @@ export class GroqProvider implements ILLMProvider {
     prompt: string,
     options?: ScriptGenerationOptions
   ): Promise<PresentationManifest> {
-    const templateId = options?.templateId || 'healthcare-modern-blue';
+    const templateId = options?.templateId || 'healthcare-borcelle-new';
     const targetSlideCount = options?.targetSlideCount || 5;
     const presId = `pres-${Date.now()}`;
 
@@ -256,29 +257,25 @@ export class GroqProvider implements ILLMProvider {
 Your task is to transform the user's input (and any attached document content) into a concise, high-impact presentation video script with rich slide layout variety.
 
 IMPORTANT GUIDELINES:
-1. SLIDE VARIETY & NARRATIVE PACING:
-   - Create 4 to 5 slides tailored to the topic. Do NOT use the same generic slide sequence for every presentation.
-   - Dynamically select from these 8 layout types:
-     * 'title': Opening slide with title, subtitle, and badge (e.g., "Borcelle Hospital", "Keynote 2026").
-     * 'two-column': Left column narrative context + Right column clinical highlight card (with stat like "98% Accuracy" and title/text).
-     * 'card-grid': 3 feature or service cards (cards: [{ title, description, tag }]).
-     * 'stat-chart': Visual metrics or bar chart (metrics: [{ label, value, subtext }], chartData: [{ label, value }]).
-     * 'bullet-list': 3 concise bullet points (under 10 words each).
-     * 'image-content': Explaining a visual concept with an imagePrompt.
-     * 'quote': Memorable testimonial, philosophy, or clinical quote with author.
-     * 'conclusion': "Thank You" closing slide with summary badge and footerText.
-   - Example diverse sequences:
-     - Sequence A: 'title' -> 'two-column' -> 'card-grid' -> 'stat-chart' -> 'conclusion'
-     - Sequence B: 'title' -> 'card-grid' -> 'two-column' -> 'quote' -> 'conclusion'
-     - Sequence C: 'title' -> 'two-column' -> 'stat-chart' -> 'bullet-list' -> 'conclusion'
+1. TOPIC-AWARE SLIDE VARIETY & NARRATIVE PACING:
+   - Create 4 to 5 slides tailored specifically to the given topic (whether it is technology, business, science, education, finance, creative, etc.).
+   - Do NOT use the same generic slide sequence for every presentation.
+   - Choose a unique, varied sequence of layouts matching the flow of ideas from:
+     * 'title': Opening slide with compelling title, subtitle, and badge (e.g., "KEYNOTE 2026", "ARCHITECTURE OVERVIEW", "INNOVATION BRIEF").
+     * 'two-column': Narrative overview + tall visual photo card with descriptive imagePrompt.
+     * 'card-grid': 3 distinct feature or pillar cards (cards: [{ title, description, tag }]).
+     * 'stat-highlight': Large numeric metric relevant to the topic (metrics: [{ label: "Efficiency Gain", value: "98%" }]) + highlightCard + photo card with imagePrompt.
+     * 'image-content': Explaining visual architecture or real-world application with a detailed imagePrompt.
+     * 'conclusion': Impactful closing slide with summary badge and footerText (e.g., "Thank You", "The Future of AI").
 
-2. CONCISENESS (CRITICAL FOR TOKEN LIMITS):
+2. DYNAMIC VISUAL DETAILS:
+   - For slides with images ('two-column', 'stat-highlight', 'image-content'), ALWAYS provide an 'imagePrompt' with vivid, concrete scene descriptions for AI image generation (e.g., "autonomous aerial drone flying across high-tech city skyline at dusk, cinematic 4k").
+   - For 'stat-highlight', provide realistic, topic-appropriate metrics (e.g., "99.9%", "4.5x", "85%").
+   - For 'card-grid', provide 3 distinct, thoughtful cards with specific titles and descriptions.
+
+3. CONCISENESS (CRITICAL FOR TOKEN LIMITS):
    - Visual text: brief, punchy phrases.
-   - Narration script: exactly 1 to 2 spoken sentences per slide. Do not write long paragraphs.
-
-3. SEPARATION OF CONCERNS:
-   - visual: On-screen titles, bullets, cards, metrics, or charts.
-   - narration.script: Natural, conversational spoken prose for a voiceover actor. If visual contains equations or symbols, spell them out phonetically.
+   - Narration script: exactly 1 to 2 spoken sentences per slide. Natural, conversational spoken prose for a voiceover actor.
 
 Return ONLY a valid JSON object matching this structure (no markdown formatting):
 {
@@ -316,7 +313,7 @@ Return ONLY a valid JSON object matching this structure (no markdown formatting)
       ],
       response_format: { type: 'json_object' },
       max_tokens: maxTokens,
-      temperature: 0.4,
+      temperature: 0.7,
     });
 
     const content = completion.choices[0]?.message?.content?.trim() || '{}';

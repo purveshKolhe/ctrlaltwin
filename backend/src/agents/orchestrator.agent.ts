@@ -23,7 +23,7 @@ export class OrchestratorAgent {
   ): Promise<PresentationManifest> {
     const provider = this.customProvider || getLLMProvider();
     const rawManifest = await provider.generatePresentationScript(prompt || '', {
-      templateId: options?.templateId || 'tech-modern-dark',
+      templateId: options?.templateId || 'healthcare-borcelle-new',
       targetSlideCount: options?.targetSlideCount || 5,
       pdfPath: options?.pdfPath,
     });

@@ -1,8 +1,15 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { NoiseOverlay } from './components/NoiseOverlay';
 
-// Pages
+// Showcase & Studio Pages
+import Home from './pages/Home';
+import Studio from './pages/Studio';
+import Auth from './pages/Auth';
+
+// Existing Auth Pages
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import CreateAccount from './pages/CreateAccount';
@@ -17,6 +24,7 @@ import { USE_MOCK } from './lib/authService';
 export default function App() {
   return (
     <AuthProvider>
+      <NoiseOverlay />
       {USE_MOCK && (
         <div style={{
           position: 'fixed',
@@ -36,8 +44,14 @@ export default function App() {
       )}
       <Router>
         <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<Welcome />} />
+          {/* Main Showcase & Studio Routes */}
+          <Route path="/" element={<Home />} />
+          <Route path="/home" element={<Home />} />
+          <Route path="/studio" element={<Studio />} />
+          <Route path="/auth" element={<Auth />} />
+
+          {/* Auth Flow Routes */}
+          <Route path="/welcome" element={<Welcome />} />
           <Route path="/login" element={<Login />} />
           <Route path="/create-account" element={<CreateAccount />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
@@ -54,6 +68,20 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
+
+      <Toaster
+        theme="dark"
+        position="bottom-center"
+        toastOptions={{
+          style: {
+            background: 'hsl(0 0% 8%)',
+            border: '1px solid hsl(0 0% 15%)',
+            color: 'hsl(60 10% 96%)',
+            fontFamily: 'JetBrains Mono, monospace',
+          },
+        }}
+      />
     </AuthProvider>
   );
 }
+

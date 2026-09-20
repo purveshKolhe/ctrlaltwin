@@ -7,14 +7,17 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "tsx src/server.ts",
     "remotion:preview": "remotion preview src/remotion/index.ts",
-    "remotion:render": "remotion render src/remotion/index.ts MainPresentation out/video.mp4"
+    "remotion:render": "remotion render src/remotion/index.ts MainPresentation out/video.mp4",
+    "remotion:lambda:deploy-func": "node --env-file=.env ./node_modules/.bin/remotion lambda functions deploy --memory 3008 --timeout 120 --disk 2048",
+    "remotion:lambda:deploy-site": "node --env-file=.env ./node_modules/.bin/remotion lambda sites create src/remotion/index.ts --site-name ctrlaltwin"
   },
   "dependencies": {
     "@google/genai": "^2.23.0",
     "@remotion/bundler": "^4.0.200",
     "@remotion/cli": "^4.0.200",
+    "@remotion/lambda": "^4.0.526",
     "@remotion/renderer": "^4.0.200",
     "@types/multer": "^2.2.0",
     "@types/pdf-parse": "^1.1.5",
@@ -28,6 +31,8 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "remotion": "^4.0.200",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -35,8 +40,6 @@
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.5",
     "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
-    "tsx": "^4.19.3",
-    "typescript": "^5.7.3"
+    "@types/react-dom": "^18.3.5"
   }
 }

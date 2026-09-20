@@ -10,13 +10,92 @@ export interface IImageProvider {
   generateImage(
     prompt: string,
     slideId: string,
-    outputDir: string
+    outputDir: string,
+    options?: { width?: number; height?: number }
   ): Promise<ImageResult>;
 }
 
 /**
- * MockImageProvider: Generates a high-resolution styled SVG visual asset locally
- * when no external image generation API key is configured.
+ * PollinationsImageProvider: Generates high quality visual assets using
+ * the free Pollinations AI image generation API.
+ * All images are converted to local Base64 Data URIs so Remotion renders
+ * instantaneously without network latency or delayRender timeouts.
+ */
+export class PollinationsImageProvider implements IImageProvider {
+  async generateImage(
+    prompt: string,
+    slideId: string,
+    outputDir: string,
+    options?: { width?: number; height?: number }
+  ): Promise<ImageResult> {
+    const fileName = `${slideId}_asset.jpg`;
+    const localPath = path.join(outputDir, fileName);
+    fs.mkdirSync(outputDir, { recursive: true });
+
+    const width = options?.width || 1200;
+    const height = options?.height || 800;
+
+    const cleanPrompt = prompt.replace(/[^\w\s,-]/g, ' ').trim();
+    const enhancedPrompt = `${cleanPrompt}, professional editorial photography, cinematic lighting, modern clean presentation visual, high resolution, 4k`;
+    const encodedPrompt = encodeURIComponent(enhancedPrompt);
+    const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width}&height=${height}&nologo=true&seed=${Math.floor(Math.random() * 999999)}`;
+
+    try {
+      console.log(`[PollinationsImageProvider] Fetching AI image for ${slideId} ("${prompt.slice(0, 45)}...")...`);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+
+      const res = await fetch(pollinationsUrl, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (res.ok) {
+        const arrayBuffer = await res.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
+        fs.writeFileSync(localPath, buffer);
+        console.log(`[PollinationsImageProvider] ✅ Saved image for ${slideId} (${buffer.length} bytes)`);
+
+        const base64Data = `data:image/jpeg;base64,${buffer.toString('base64')}`;
+        return {
+          imageUrl: base64Data,
+          localPath,
+        };
+      } else {
+        console.warn(`[PollinationsImageProvider] Pollinations returned HTTP ${res.status}`);
+      }
+    } catch (err: any) {
+      console.warn(`[PollinationsImageProvider] Warning: could not download image (${err.message}). Using local high-res visual fallback.`);
+    }
+
+    // Local Data URI fallback: Sleek modern presentation graphic matching topic
+    const svgFallback = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#091736" />
+      <stop offset="50%" stop-color="#0d276b" />
+      <stop offset="100%" stop-color="#050d24" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.2" />
+    </linearGradient>
+  </defs>
+  <rect width="${width}" height="${height}" fill="url(#bg)" />
+  <circle cx="${width * 0.5}" cy="${height * 0.45}" r="${Math.min(width, height) * 0.28}" fill="url(#accent)" />
+  <text x="${width * 0.5}" y="${height * 0.85}" fill="#ffffff" opacity="0.85" font-family="system-ui, sans-serif" font-size="24" font-weight="600" text-anchor="middle">
+    ${cleanPrompt.slice(0, 48)}
+  </text>
+</svg>`;
+
+    const fallbackBase64 = `data:image/svg+xml;base64,${Buffer.from(svgFallback).toString('base64')}`;
+    return {
+      imageUrl: fallbackBase64,
+      localPath,
+    };
+  }
+}
+
+/**
+ * MockImageProvider: Generates a high-resolution styled SVG visual asset locally.
  */
 export class MockImageProvider implements IImageProvider {
   async generateImage(
@@ -34,65 +113,35 @@ export class MockImageProvider implements IImageProvider {
       <stop offset="50%" stop-color="#1e293b" />
       <stop offset="100%" stop-color="#090d16" />
     </linearGradient>
-    <linearGradient id="accent-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#818cf8" />
-    </linearGradient>
   </defs>
-  
-  <rect width="800" height="600" rx="24" fill="url(#bg-grad)" stroke="#38bdf840" stroke-width="2"/>
-  
-  <!-- Subtle grid pattern -->
-  <g stroke="#ffffff10" stroke-width="1">
-    <line x1="0" y1="150" x2="800" y2="150"/>
-    <line x1="0" y1="300" x2="800" y2="300"/>
-    <line x1="0" y1="450" x2="800" y2="450"/>
-    <line x1="200" y1="0" x2="200" y2="600"/>
-    <line x1="400" y1="0" x2="400" y2="600"/>
-    <line x1="600" y1="0" x2="600" y2="600"/>
-  </g>
-
-  <!-- Central Visual Node -->
-  <circle cx="400" cy="270" r="80" fill="url(#accent-grad)" opacity="0.15"/>
-  <circle cx="400" cy="270" r="50" fill="none" stroke="url(#accent-grad)" stroke-width="3" stroke-dasharray="6,4"/>
-  <circle cx="400" cy="270" r="24" fill="url(#accent-grad)"/>
-
-  <!-- Satellite Nodes -->
-  <circle cx="260" cy="220" r="14" fill="#38bdf8" opacity="0.8"/>
-  <circle cx="540" cy="220" r="14" fill="#818cf8" opacity="0.8"/>
-  <circle cx="320" cy="360" r="10" fill="#38bdf8" opacity="0.6"/>
-  <circle cx="480" cy="360" r="10" fill="#818cf8" opacity="0.6"/>
-
-  <line x1="400" y1="270" x2="260" y2="220" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4,4"/>
-  <line x1="400" y1="270" x2="540" y2="220" stroke="#818cf8" stroke-width="2" stroke-dasharray="4,4"/>
-  <line x1="400" y1="270" x2="320" y2="360" stroke="#38bdf8" stroke-width="1.5"/>
-  <line x1="400" y1="270" x2="480" y2="360" stroke="#818cf8" stroke-width="1.5"/>
-
-  <!-- Prompt Label text -->
-  <rect x="60" y="480" width="680" height="70" rx="14" fill="#00000060" stroke="#ffffff15"/>
-  <text x="400" y="522" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="16" text-anchor="middle">
-    AI Visual Representation
+  <rect width="800" height="600" rx="24" fill="url(#bg-grad)"/>
+  <text x="400" y="300" fill="#38bdf8" font-family="system-ui, sans-serif" font-size="20" text-anchor="middle">
+    ${prompt.slice(0, 40)}
   </text>
 </svg>`;
 
     fs.mkdirSync(outputDir, { recursive: true });
     fs.writeFileSync(localPath, svgContent, 'utf-8');
 
+    const base64Data = `data:image/svg+xml;base64,${Buffer.from(svgContent).toString('base64')}`;
     return {
-      imageUrl: localPath,
+      imageUrl: base64Data,
       localPath,
     };
   }
 }
 
 /**
- * Factory function to retrieve the configured image provider
+ * Factory function to retrieve the configured image provider.
+ * Defaults to PollinationsImageProvider.
  */
 export function getImageProvider(): IImageProvider {
-  const providerType = process.env.IMAGE_PROVIDER || 'mock';
+  const providerType = process.env.IMAGE_PROVIDER || 'pollinations';
   switch (providerType) {
     case 'mock':
-    default:
       return new MockImageProvider();
+    case 'pollinations':
+    default:
+      return new PollinationsImageProvider();
   }
 }

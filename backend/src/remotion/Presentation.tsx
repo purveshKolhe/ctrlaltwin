@@ -1,12 +1,19 @@
 import React from 'react';
 import { Series } from 'remotion';
 import { RemotionPresentationProps } from '../types/presentation';
-import { SlideRenderer } from './templates/base/SlideRenderer';
+import { SlideRenderer as BaseSlideRenderer } from './templates/base/SlideRenderer';
+import { HealthcareSlideRenderer } from './templates/healthcare/HealthcareSlideRenderer';
 import { getTheme } from './themes';
 
 export const Presentation: React.FC<RemotionPresentationProps> = ({ manifest }) => {
   const theme = manifest.theme || getTheme(manifest.templateId);
   const fps = manifest.fps || 30;
+
+  const isHealthcareTemplate =
+    !manifest.templateId ||
+    manifest.templateId === 'healthcare-borcelle-new' ||
+    manifest.templateId === 'healthcare-modern-blue' ||
+    manifest.templateId === 'healthcare';
 
   return (
     <div style={{ flex: 1, backgroundColor: theme.backgroundColor }}>
@@ -21,7 +28,11 @@ export const Presentation: React.FC<RemotionPresentationProps> = ({ manifest }) 
 
           return (
             <Series.Sequence key={slide.id} durationInFrames={duration}>
-              <SlideRenderer slide={slide} theme={theme} />
+              {isHealthcareTemplate ? (
+                <HealthcareSlideRenderer slide={slide} theme={theme} />
+              ) : (
+                <BaseSlideRenderer slide={slide} theme={theme} />
+              )}
             </Series.Sequence>
           );
         })}

@@ -1,4 +1,9 @@
 import { bundle } from '@remotion/bundler';
+import {
+  AwsRegion,
+  getRenderProgress,
+  renderMediaOnLambda,
+} from '@remotion/lambda/client';
 import { renderFrames, selectComposition, stitchFramesToVideo } from '@remotion/renderer';
 import fs from 'fs';
 import os from 'os';
@@ -30,6 +35,7 @@ export function getSlideAnimationDurationInFrames(slide: SlideData): number {
       return 35; // ~1.17s @ 30fps
     case 'two-column':
       return 45; // ~1.5s @ 30fps
+    case 'stat-highlight':
     case 'stat-chart':
       return 45; // ~1.5s @ 30fps
     case 'card-grid': {
@@ -94,9 +100,122 @@ export class RenderService {
   }
 
   /**
-   * Renders the synchronized presentation manifest into an MP4 video using
-   * selective animation rendering + static frame duplication + ultrafast encoding.
-   * This reduces Chromium rendering work by 60–80% while keeping all animations intact.
+   * Renders the presentation using AWS Lambda via Remotion Lambda.
+   * Dispatches chunks across dozens of parallel micro-workers for ~5-10s rendering
+   * and saves the resulting MP4 directly to Amazon S3.
+   */
+  async renderOnLambda(
+    manifest: PresentationManifest,
+    onProgress?: RenderProgressCallback,
+    onLog?: (msg: string) => void
+  ): Promise<RenderResult> {
+    const log = (msg: string) => {
+      console.log(`[RenderService:Lambda] ${msg}`);
+      if (onLog) onLog(msg);
+    };
+
+    const region = (process.env.REMOTION_AWS_REGION || process.env.AWS_REGION || 'us-east-1') as AwsRegion;
+    const functionName = process.env.REMOTION_FUNCTION_NAME;
+    const serveUrl = process.env.REMOTION_SERVE_URL;
+
+    if (!functionName || !serveUrl) {
+      throw new Error(
+        'AWS Lambda rendering requested (RENDER_MODE=lambda), but REMOTION_FUNCTION_NAME or REMOTION_SERVE_URL is not configured.\n' +
+        'Please deploy your Remotion Lambda function and site, and set REMOTION_FUNCTION_NAME and REMOTION_SERVE_URL in your environment variables.'
+      );
+    }
+
+    const t0 = Date.now();
+    log(`Initiating AWS Lambda render in region "${region}"...`);
+    log(`Using Lambda Function: "${functionName}"`);
+    log(`Using Deployed Remotion Site: "${serveUrl}"`);
+
+    // Prepare manifest with Data URI audio for Lambda compatibility
+    const manifestForRendering: PresentationManifest = {
+      ...manifest,
+      slides: manifest.slides.map((s) => ({
+        ...s,
+        narration: {
+          ...s.narration,
+          audioPath: convertAudioToDataUri(s.narration.audioPath),
+        },
+      })),
+    };
+
+    const framesPerLambda = Number(process.env.REMOTION_FRAMES_PER_LAMBDA) || 30;
+    log(`Dispatching render with ${framesPerLambda} frames per Lambda worker...`);
+
+    const { renderId, bucketName } = await renderMediaOnLambda({
+      region,
+      functionName,
+      serveUrl,
+      composition: 'MainPresentation',
+      inputProps: { manifest: manifestForRendering },
+      codec: 'h264',
+      imageFormat: 'jpeg',
+      jpegQuality: 85,
+      maxRetries: 2,
+      privacy: 'public',
+      framesPerLambda,
+      outName: `${manifest.id}.mp4`,
+      downloadBehavior: {
+        type: 'play-in-browser',
+      },
+    });
+
+    log(`Lambda render job dispatched! Render ID: ${renderId}, S3 Bucket: ${bucketName}`);
+
+    // Poll for progress until complete or fatal error
+    let lastLoggedPercent = -1;
+    while (true) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
+      const progress = await getRenderProgress({
+        renderId,
+        bucketName,
+        functionName,
+        region,
+      });
+
+      if (progress.fatalErrorEncountered) {
+        const firstError = progress.errors?.[0];
+        const errorMsg = firstError?.message || firstError?.stack || 'Lambda render encountered a fatal error';
+        log(`Fatal error on Lambda: ${errorMsg}`);
+        throw new Error(`Lambda render failed: ${errorMsg}`);
+      }
+
+      if (typeof progress.overallProgress === 'number') {
+        const percent = Math.round(progress.overallProgress * 100);
+        if (onProgress) onProgress(percent);
+        if (percent % 10 === 0 && percent !== lastLoggedPercent) {
+          lastLoggedPercent = percent;
+          log(`AWS Lambda progress: ${percent}% (Chunks: ${progress.chunks} rendered)`);
+        }
+      }
+
+      if (progress.done) {
+        const totalRenderTime = Number(((Date.now() - t0) / 1000).toFixed(2));
+        const totalFrames = manifest.totalDurationInFrames || 0;
+        const avgFps = Number((totalFrames / (totalRenderTime || 1)).toFixed(1));
+        const s3Url = progress.outputFile as string;
+
+        log(`AWS Lambda render finished in ${totalRenderTime}s (Avg ${avgFps} fps).`);
+        log(`Public S3 URL: ${s3Url}`);
+
+        return {
+          outputPath: s3Url,
+          renderTimeSeconds: totalRenderTime,
+          avgFps,
+          totalFrames,
+        };
+      }
+    }
+  }
+
+  /**
+   * Renders the synchronized presentation manifest into an MP4 video.
+   * If RENDER_MODE=lambda is set, offloads to AWS Lambda.
+   * Otherwise, uses selective animation rendering + static frame duplication + ultrafast encoding.
    */
   async renderPresentation(
     manifest: PresentationManifest,
@@ -104,6 +223,10 @@ export class RenderService {
     onProgress?: RenderProgressCallback,
     onLog?: (msg: string) => void
   ): Promise<RenderResult> {
+    if (process.env.RENDER_MODE === 'lambda') {
+      return this.renderOnLambda(manifest, onProgress, onLog);
+    }
+
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 
     const log = (msg: string) => {
