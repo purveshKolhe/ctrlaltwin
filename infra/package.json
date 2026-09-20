@@ -8,7 +8,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "synth": "npm run build && cdk synth",
     "deploy": "npm run build && cdk deploy CtrlAltWinAuthStack",
-    "test": "USERS_TABLE_NAME=TestUsersTable vitest run lambda/post-confirmation.test.ts"
+    "test": "USERS_TABLE_NAME=TestUsersTable vitest run lambda/post-confirmation.test.ts lambda/post-authentication.test.ts"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.0.0",

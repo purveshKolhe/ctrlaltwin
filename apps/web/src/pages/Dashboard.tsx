@@ -43,7 +43,7 @@ export default function Dashboard() {
         <div className="card">
           <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <User color="var(--primary)" />
-            Welcome back, {user?.username || 'User'}!
+            Welcome back, {user?.displayName || user?.username || 'User'}!
           </h2>
           <p style={{ color: 'var(--text-muted)' }}>
             This is your authenticated dashboard. You can only see this page if you are logged in.

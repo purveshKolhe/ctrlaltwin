@@ -12,6 +12,7 @@ import {
   signOutUser as realSignOutUser,
   type SignUpInputParams,
 } from '@ctrlaltwin/auth-client';
+import { fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
 import { validatePassword } from './passwordValidation';
 
 export const USE_MOCK = import.meta.env.VITE_USE_MOCK_AUTH === 'true';
@@ -55,12 +56,17 @@ export function initAuth() {
   if (!region || !userPoolId || !userPoolClientId) {
     throw new Error('Missing required Cognito configuration. Check .env.local.');
   }
-  
+
+  let domain = import.meta.env.VITE_COGNITO_DOMAIN;
+  if (domain && domain.startsWith('https://')) {
+    domain = domain.replace('https://', '');
+  }
+
   configureAuth({
     region: import.meta.env.VITE_AWS_REGION,
     userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
     userPoolClientId: import.meta.env.VITE_COGNITO_USER_POOL_CLIENT_ID,
-    userPoolDomain: import.meta.env.VITE_COGNITO_DOMAIN,
+    userPoolDomain: domain,
     redirectSignIn: import.meta.env.VITE_REDIRECT_SIGN_IN || 'http://localhost:5173/',
     redirectSignOut: import.meta.env.VITE_REDIRECT_SIGN_OUT || 'http://localhost:5173/',
   });
@@ -68,16 +74,16 @@ export function initAuth() {
 
 function findMockAccount(identifier: string) {
   const lowerId = identifier.trim().toLowerCase();
-  
+
   if (mockRegistry.has(lowerId)) {
     return mockRegistry.get(lowerId) || null;
   }
-  
+
   if (mockEmailIndex.has(lowerId)) {
     const username = mockEmailIndex.get(lowerId)!;
     return mockRegistry.get(username) || null;
   }
-  
+
   return null;
 }
 
@@ -86,12 +92,12 @@ export async function signUp(input: SignUpInputParams) {
     await delay(500);
     const username = input.username.trim().toLowerCase();
     const email = input.email.trim().toLowerCase();
-    
+
     // Basic username validation for mock
     if (username.length < 3 || username.length > 24 || !/^[a-z][a-z0-9_]*$/.test(username)) {
       throw new Error("Invalid username format");
     }
-    
+
     const errors = validatePassword(input.password);
     if (errors.length > 0) {
       throw new Error("Password does not meet requirements");
@@ -130,7 +136,7 @@ export async function confirmSignUpEmail(identifier: string, confirmationCode: s
     await delay(500);
     const account = findMockAccount(identifier);
     if (!account) throw new Error("Incorrect username or password."); // Generic
-    
+
     if (confirmationCode !== '123456') {
       throw new Error('Invalid code (Mock: use 123456)');
     }
@@ -151,7 +157,7 @@ export async function signIn(identifier: string, password: string) {
     if (!account.verified) {
       throw new Error('User is not confirmed.');
     }
-    
+
     currentMockUser = { username: account.username };
     currentMockToken = 'mock_jwt_token_' + account.username;
     return { isSignedIn: true, nextStep: { signInStep: 'DONE' } };
@@ -170,7 +176,16 @@ export async function signInWithGoogle() {
   if (USE_MOCK) {
     throw new Error('Google Sign-In is not supported in Mock Mode');
   }
-  return authClientSignInWithGoogle();
+  if (!import.meta.env.VITE_COGNITO_DOMAIN) {
+    console.error('Missing VITE_COGNITO_DOMAIN in environment. OAuth parameter not configured.');
+    throw new Error('Google sign-in is temporarily unavailable. Please try again.');
+  }
+  try {
+    return await authClientSignInWithGoogle();
+  } catch (err: any) {
+    console.error('Google Sign-In initiation failed:', err);
+    throw new Error('Google sign-in is temporarily unavailable. Please try again.');
+  }
 }
 
 export async function resetPassword(identifier: string) {
@@ -190,12 +205,12 @@ export async function confirmPasswordReset(identifier: string, code: string, new
   if (USE_MOCK) {
     await delay(500);
     const account = findMockAccount(identifier);
-    
+
     // Check if account exists and has a pending reset
     if (!account || !mockPendingResets.has(account.username)) {
       throw new Error("Incorrect username or password.");
     }
-    
+
     if (code !== '123456') {
       throw new Error('Invalid code (Mock: use 123456)');
     }
@@ -205,13 +220,13 @@ export async function confirmPasswordReset(identifier: string, code: string, new
     }
     account.password = newPass;
     mockPendingResets.delete(account.username);
-    
+
     // Invalidate any active session for this user
     if (currentMockUser?.username === account.username) {
       currentMockUser = null;
       currentMockToken = null;
     }
-    
+
     return;
   }
   return finishPasswordReset(identifier, code, newPass);
@@ -226,9 +241,50 @@ export async function getAccessToken() {
 
 export async function getSignedInUser() {
   if (USE_MOCK) {
+    if (currentMockUser) {
+      const account = findMockAccount(currentMockUser.username);
+      return { ...currentMockUser, displayName: account?.displayName || account?.username };
+    }
     return currentMockUser;
   }
-  return getRealSignedInUser();
+  const user = await getRealSignedInUser();
+  if (user) {
+    let displayName = '';
+
+    try {
+      const session = await fetchAuthSession();
+      const payload = session.tokens?.idToken?.payload;
+      if (payload) {
+        if (typeof payload.name === 'string' && payload.name.trim()) {
+          displayName = payload.name;
+        } else if (typeof payload.given_name === 'string' && payload.given_name.trim()) {
+          displayName = payload.given_name;
+        }
+      }
+    } catch (error) {
+      // Ignore session errors here
+    }
+
+    if (!displayName) {
+      try {
+        const attributes = await fetchUserAttributes();
+        if (typeof attributes.name === 'string' && attributes.name.trim()) {
+          displayName = attributes.name;
+        } else if (typeof attributes.given_name === 'string' && attributes.given_name.trim()) {
+          displayName = attributes.given_name;
+        }
+      } catch (error) {
+        // Ignore attribute fetch errors
+      }
+    }
+
+    if (!displayName) {
+      displayName = user.username;
+    }
+
+    return { ...user, displayName };
+  }
+  return user;
 }
 
 export async function signOutUser() {
