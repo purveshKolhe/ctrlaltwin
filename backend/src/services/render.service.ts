@@ -30,6 +30,7 @@ export function getSlideAnimationDurationInFrames(slide: SlideData): number {
       return 35; // ~1.17s @ 30fps
     case 'two-column':
       return 45; // ~1.5s @ 30fps
+    case 'stat-highlight':
     case 'stat-chart':
       return 45; // ~1.5s @ 30fps
     case 'card-grid': {

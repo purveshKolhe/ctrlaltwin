@@ -14,7 +14,7 @@ async function runTest() {
   const job: GenerationJob = {
     id: `test-${Date.now()}`,
     prompt: 'Minimally Invasive Robotic Surgery and Precision Medicine',
-    templateId: 'healthcare-modern-blue',
+    templateId: 'healthcare-borcelle-new',
     status: 'pending',
     progress: 0,
     logs: [],

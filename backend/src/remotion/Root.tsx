@@ -1,8 +1,36 @@
 import React from 'react';
-import { Composition } from 'remotion';
-import { PresentationManifest } from '../types/presentation';
+import { Composition, Folder } from 'remotion';
+import { PresentationManifest, SlideData } from '../types/presentation';
 import { Presentation } from './Presentation';
-import { DEFAULT_THEME } from './themes';
+import { HealthcareSlideRenderer } from './templates/healthcare/HealthcareSlideRenderer';
+import { DEFAULT_THEME, THEMES } from './themes';
+
+const sampleHealthcareSlide: SlideData = {
+  id: 'slide-01',
+  type: 'stat-highlight',
+  visual: {
+    badge: 'Borcelle Hospital',
+    title: 'Skilled and Trusted Professionals',
+    subtitle:
+      'Our team of healthcare experts brings a combination of experience, continuous learning, and genuine care.',
+    metrics: [
+      {
+        value: '98%',
+        label: 'Diagnostic Accuracy',
+        subtext: 'Experience Meets Empathy',
+      },
+    ],
+    highlightCard: {
+      title: 'Continuous Medical Training',
+      text: 'Up-to-date protocol execution to guarantee modern patient safety.',
+    },
+    footerText: 'Borcelle Hospital Presentation',
+  },
+  narration: {
+    script:
+      'Our team of healthcare experts brings years of clinical mastery and human empathy to every diagnosis.',
+  },
+};
 
 // Default mock presentation manifest for Remotion Studio preview & testing
 export const sampleManifest: PresentationManifest = {
@@ -128,6 +156,21 @@ export const Root: React.FC = () => {
           };
         }}
       />
+
+      <Folder name="HealthcareSlides">
+        <Composition
+          id="HealthcareSlide"
+          component={HealthcareSlideRenderer}
+          durationInFrames={180}
+          fps={30}
+          width={1920}
+          height={1080}
+          defaultProps={{
+            slide: sampleHealthcareSlide,
+            theme: THEMES['healthcare-borcelle-new'],
+          }}
+        />
+      </Folder>
     </>
   );
 };

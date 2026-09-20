@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Canva Borcelle Medical Slides - Interactive Showcase</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #030712;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .viewport-container {
+      width: 100%;
+      max-width: 1280px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+      background: #000;
+    }
+    .slide-aspect-ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 ratio */
+      overflow: hidden;
+    }
+    .slide-scaler {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: top left;
+    }
+    .nav-btn {
+      background: #1e293b;
+      color: #cbd5e1;
+      border: 1px solid #334155;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .nav-btn:hover {
+      background: #334155;
+      color: white;
+    }
+    .nav-btn.active {
+      background: #0284c7;
+      border-color: #38bdf8;
+      color: white;
+      font-weight: 600;
+    }
+    .slide-view {
+      display: none;
+      width: 1920px;
+      height: 1080px;
+    }
+    .slide-view.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Controls & Slide Selector Bar -->
+  <div style="width: 100%; max-width: 1280px; margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+      <div>
+        <h1 style="font-size: 22px; font-weight: 700; margin: 0; color: #38bdf8; display: flex; align-items: center; gap: 8px;">
+          <span>Canva Borcelle Medical Slides Showcase</span>
+          <span style="font-size: 12px; background: rgba(56,189,248,0.15); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); padding: 2px 8px; border-radius: 9999px;">Pixel-Perfect 1920x1080</span>
+        </h1>
+        <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;">
+          Select any slide tab below or use the Previous / Next arrows.
+        </p>
+      </div>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button onclick="prevSlide()" class="nav-btn">← Prev</button>
+        <span id="slideCounter" style="font-size: 14px; font-weight: 600; color: #94a3b8; min-width: 60px; text-align: center;">1 / 8</span>
+        <button onclick="nextSlide()" class="nav-btn">Next →</button>
+        <a href="/index.html" style="margin-left: 12px; background: #0f172a; border: 1px solid #334155; color: #94a3b8; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 14px;">App Home</a>
+      </div>
+    </div>
+
+    <!-- Slide Tabs -->
+    <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px;" id="tabsBar">
+      <button class="nav-btn active" onclick="showSlide(1)">Slide 1 (Cover)</button>
+      <button class="nav-btn" onclick="showSlide(2)">Slide 2 (Priority)</button>
+      <button class="nav-btn" onclick="showSlide(3)">Slide 3 (Pros & Stat)</button>
+      <button class="nav-btn" onclick="showSlide(4)">Slide 4 (Patient & Stack)</button>
+      <button class="nav-btn" onclick="showSlide(5)">Slide 5 (3 Pillars)</button>
+      <button class="nav-btn" onclick="showSlide(6)">Slide 6 (Prevention)</button>
+      <button class="nav-btn" onclick="showSlide(7)">Slide 7 (Environment)</button>
+      <button class="nav-btn" onclick="showSlide(8)">Slide 8 (Telehealth)</button>
+      <button class="nav-btn" onclick="showSlide(9)">Slide 9 (Education)</button>
+      <button class="nav-btn" onclick="showSlide(10)">Slide 10 (Outro)</button>
+    </div>
+  </div>
+
+  <!-- Scaled 16:9 Viewport -->
+  <div class="viewport-container" id="container">
+    <div class="slide-aspect-ratio">
+      <div class="slide-scaler" id="slideFrame">
+
+        <!-- ========================================== -->
+        <!-- SLIDE 1: COVER                             -->
+        <!-- ========================================== -->
+        <div id="slide-1" class="slide-view active">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans text-white"
+            style="
+              width: 1920px;
+              height: 1080px;
+              background:
+                radial-gradient(ellipse 70% 80% at 20% 40%, rgba(20, 60, 160, 0.85) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 60% at 85% 65%, rgba(10, 35, 110, 0.9) 0%, transparent 70%),
+                radial-gradient(ellipse 90% 90% at 50% 90%, rgba(5, 18, 55, 0.95) 0%, transparent 80%),
+                linear-gradient(135deg, #091736 0%, #0d276b 35%, #081a4a 65%, #050d24 100%);
+            "
+          >
+            <svg
+              class="absolute inset-0 w-full h-full pointer-events-none opacity-30"
+              viewBox="0 0 1920 1080"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M-200,600 C300,450 700,900 1300,550 C1700,300 1950,500 2200,400"
+                stroke="url(#silkGlow)"
+                stroke-width="320"
+                stroke-linecap="round"
+                filter="blur(80px)"
+              />
+              <defs>
+                <linearGradient id="silkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#2b66d6" stop-opacity="0.6" />
+                  <stop offset="50%" stop-color="#1240a8" stop-opacity="0.3" />
+                  <stop offset="100%" stop-color="#0a205a" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            <div class="relative z-10 w-full h-full flex flex-col justify-between p-[96px]">
+              <div class="flex justify-between items-start">
+                <div class="flex flex-col gap-1">
+                  <h2 class="text-[34px] font-semibold tracking-[-0.01em] text-white/95 leading-tight">
+                    Borcelle Hospital
+                  </h2>
+                  <p class="text-[20px] font-light tracking-wide text-white/70">
+                    Care at Every Step
+                  </p>
+                </div>
+                <div class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white/80 backdrop-blur-sm">
+                  <span class="text-[22px] leading-none mb-0.5">→</span>
+                </div>
+              </div>
+
+              <div class="flex flex-col -mt-8">
+                <div class="overflow-hidden">
+                  <h1 class="text-[128px] font-medium tracking-[-0.035em] leading-[0.95] text-white">
+                    Medical
+                  </h1>
+                </div>
+                <div class="overflow-hidden">
+                  <h1 class="text-[128px] font-medium tracking-[-0.035em] leading-[0.95] text-white/90">
+                    Presentation
+                  </h1>
+                </div>
+                <p class="mt-8 text-[26px] font-normal tracking-wide text-white/75">
+                  Compassionate Care at Every Step
+                </p>
+              </div>
+
+              <div class="flex justify-between items-end border-t border-white/15 pt-8 text-[18px] tracking-wide text-white/70">
+                <div class="flex items-center gap-6">
+                  <span class="font-semibold text-white/90">Borcelle</span>
+                  <span class="w-1 h-1 rounded-full bg-white/40"></span>
+                  <span>2025</span>
+                </div>
+                <div>
+                  <span class="text-white/60 font-medium">Healthcare Presentation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 2: PRIORITY (NARRATIVE + IMAGE)      -->
+        <!-- ========================================== -->
+        <div id="slide-2" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">02 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] grid grid-cols-12 gap-16 items-center">
+              <div class="col-span-7 flex flex-col justify-center pr-6">
+                <h1 class="text-[82px] font-light leading-[1.05] tracking-[-0.03em] text-[#0a1b3f]">
+                  Your Health, <br />
+                  <span class="font-semibold text-[#0d276b]">Our Priority</span>
+                </h1>
+
+                <div class="mt-14 grid grid-cols-2 gap-10 text-[20px] leading-[1.65] text-[#334155]">
+                  <div class="flex flex-col justify-between">
+                    <p class="font-normal">
+                      We are committed to care that centers around your individual needs. 
+                      From your first consultation to every follow-up, we ensure each service 
+                      is delivered with attention, safety, and compassion. Your comfort and 
+                      well-being are always our top concern.
+                    </p>
+                    <div class="mt-12 flex items-center">
+                      <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-[#0a1b3f] text-white text-[17px] font-medium shadow-sm">
+                        <span>Next Page</span>
+                        <span class="text-[18px]">→</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex flex-col">
+                    <p className="font-normal text-[#475569]">
+                      Our approach is built on trust and personal connection. We take the time 
+                      to understand your concerns, explain every step clearly, and make sure you 
+                      feel confident in the care you receive. By placing your needs first, we 
+                      create a supportive environment where you feel respected, heard, and fully 
+                      cared for throughout your entire health journey.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-5 h-[760px] relative">
+                <div class="w-full h-full rounded-[36px] overflow-hidden shadow-2xl border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=1200&q=80"
+                    alt="Physiotherapist assisting patient during exercise"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[36px] pointer-events-none"></div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 3: PROFESSIONALS & METRIC (98%)      -->
+        <!-- ========================================== -->
+        <div id="slide-3" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">03 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] grid grid-cols-12 gap-16 items-center">
+              <div class="col-span-7 flex flex-col justify-between h-[740px] pr-4">
+                <div>
+                  <div class="flex items-center gap-6">
+                    <h1 class="text-[76px] font-light leading-[1.08] tracking-[-0.03em] text-[#0a1b3f]">
+                      Skilled and <br />
+                      <span class="font-semibold text-[#0d276b]">Trusted Professionals</span>
+                    </h1>
+                    <span class="text-[52px] font-light text-[#0a1b3f] self-end mb-2">→</span>
+                  </div>
+                  <p class="mt-10 text-[22px] leading-[1.7] text-[#475569] max-w-[820px] font-normal">
+                    Our team of healthcare experts brings a combination of experience, 
+                    continuous learning, and genuine care. Through collaboration and 
+                    up-to-date training, we provide accurate diagnoses, effective 
+                    treatment plans, and a consistently high level of care.
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 pt-6">
+                  <div class="rounded-[28px] bg-[#0a1b3f] text-white p-10 flex flex-col justify-between h-[230px] shadow-sm">
+                    <span class="text-[15px] uppercase tracking-widest text-white/60 font-semibold">
+                      Our Standard
+                    </span>
+                    <p class="text-[34px] font-medium leading-[1.15] text-white tracking-tight">
+                      Experience <br />
+                      Meets Empathy
+                    </p>
+                  </div>
+
+                  <div class="rounded-[28px] bg-white border border-[#e2e8f0] p-10 flex flex-col justify-between h-[230px] shadow-sm">
+                    <span class="text-[15px] uppercase tracking-widest text-[#64748b] font-semibold">
+                      Reliability
+                    </span>
+                    <div>
+                      <h2 class="text-[64px] font-semibold tracking-tight text-[#0d276b] leading-none">
+                        98%
+                      </h2>
+                      <p class="mt-2 text-[20px] font-medium text-[#334155]">
+                        Accuracy
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-5 h-[740px] relative">
+                <div class="w-full h-full rounded-[36px] overflow-hidden shadow-2xl border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?auto=format&fit=crop&w=1200&q=80"
+                    alt="Medical team discussing clinical records"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[36px] pointer-events-none"></div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 4: PATIENT-CENTERED + DUAL PHOTO     -->
+        <!-- ========================================== -->
+        <div id="slide-4" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">04 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] grid grid-cols-12 gap-16 items-center">
+              <div class="col-span-7 flex flex-col justify-between h-[740px] pr-6">
+                <div>
+                  <div class="flex items-start justify-between">
+                    <h1 class="text-[76px] font-light leading-[1.08] tracking-[-0.03em] text-[#0a1b3f]">
+                      Patient-Centered <br />
+                      <span class="font-semibold text-[#0d276b]">Approach</span>
+                    </h1>
+                    <div class="w-14 h-14 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[28px] mt-2">
+                      ↓
+                    </div>
+                  </div>
+                  <p class="mt-10 text-[22px] leading-[1.75] text-[#475569] max-w-[800px] font-normal">
+                    You are at the heart of every decision we make. We take time to listen,
+                    understand your goals, and adjust our care to match your lifestyle.
+                    This personalized approach helps build trust and ensures that every step
+                    of your journey feels right for you.
+                  </p>
+                </div>
+
+                <div class="w-[360px] rounded-[28px] bg-white border border-[#e2e8f0] p-10 flex flex-col justify-between shadow-sm">
+                  <span class="text-[14px] uppercase tracking-widest text-[#64748b] font-semibold">
+                    Feedback Score
+                  </span>
+                  <div class="mt-4">
+                    <h2 class="text-[64px] font-semibold tracking-tight text-[#0d276b] leading-none">
+                      89%
+                    </h2>
+                    <p class="mt-2 text-[20px] font-medium text-[#334155]">
+                      Satisfaction
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-5 h-[740px] grid grid-rows-2 gap-6">
+                <div class="w-full h-full rounded-[30px] overflow-hidden shadow-lg border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1579684385127-1ef15d508118?auto=format&fit=crop&w=1200&q=80"
+                    alt="Physician having a consultation with patients"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[30px] pointer-events-none"></div>
+                </div>
+                <div class="w-full h-full rounded-[30px] overflow-hidden shadow-lg border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1588776814546-1ffcf47267a5?auto=format&fit=crop&w=1200&q=80"
+                    alt="Hands-on patient treatment"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[30px] pointer-events-none"></div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 5: 3-COLUMN PILLARS                  -->
+        <!-- ========================================== -->
+        <div id="slide-5" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">05 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] flex flex-col justify-between">
+              <div class="max-w-[1100px]">
+                <h1 class="text-[76px] font-light leading-[1.08] tracking-[-0.03em] text-[#0a1b3f]">
+                  Advanced <br />
+                  <span class="font-semibold text-[#0d276b]">Diagnostic Tools</span>
+                </h1>
+              </div>
+
+              <div class="grid grid-cols-3 gap-10 mb-8">
+                <div class="rounded-[32px] bg-white border border-[#e2e8f0] p-12 flex flex-col justify-between h-[420px] shadow-sm">
+                  <div class="w-12 h-12 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[20px] font-light">
+                    ✕
+                  </div>
+                  <p class="text-[24px] leading-[1.65] font-normal text-[#334155] tracking-tight">
+                    Modern equipment helps deliver quick diagnostic outcomes, reducing waiting time for treatment.
+                  </p>
+                  <div class="text-[15px] font-semibold tracking-wider text-[#94a3b8] uppercase">
+                    Phase 01
+                  </div>
+                </div>
+
+                <div class="rounded-[32px] bg-white border border-[#e2e8f0] p-12 flex flex-col justify-between h-[420px] shadow-sm">
+                  <div class="w-12 h-12 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[20px] font-light">
+                    ✕
+                  </div>
+                  <p class="text-[24px] leading-[1.65] font-normal text-[#334155] tracking-tight">
+                    Advanced tools provide precise data that lead to more effective and personalized care plans.
+                  </p>
+                  <div class="text-[15px] font-semibold tracking-wider text-[#94a3b8] uppercase">
+                    Phase 02
+                  </div>
+                </div>
+
+                <div class="rounded-[32px] bg-white border border-[#e2e8f0] p-12 flex flex-col justify-between h-[420px] shadow-sm">
+                  <div class="w-12 h-12 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[20px] font-light">
+                    ✕
+                  </div>
+                  <p class="text-[24px] leading-[1.65] font-normal text-[#334155] tracking-tight">
+                    Timely identification of potential issues allows for earlier intervention and better health outcomes.
+                  </p>
+                  <div class="text-[15px] font-semibold tracking-wider text-[#94a3b8] uppercase">
+                    Phase 03
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 6: PREVENTIVE CARE FOCUS             -->
+        <!-- ========================================== -->
+        <div id="slide-6" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">06 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] grid grid-cols-12 gap-16 items-center">
+              <div class="col-span-7 flex flex-col justify-center pr-6">
+                <h1 class="text-[82px] font-light leading-[1.05] tracking-[-0.03em] text-[#0a1b3f]">
+                  Preventive <br />
+                  <span class="font-semibold text-[#0d276b]">Care Focus</span>
+                </h1>
+
+                <div class="mt-14 grid grid-cols-2 gap-10 text-[20px] leading-[1.65] text-[#334155]">
+                  <div class="flex flex-col justify-between">
+                    <p class="font-normal">
+                      Staying healthy begins with prevention. We encourage regular check-ups,
+                      early screenings, and healthy habits to detect potential issues before
+                      they become serious. A proactive approach helps reduce long-term risks
+                      and supports a healthier life overall.
+                    </p>
+                    <div class="mt-12 flex items-center">
+                      <div class="inline-flex items-center gap-3 px-6 py-3 rounded-full bg-[#0a1b3f] text-white text-[17px] font-medium shadow-sm">
+                        <span>Next Page</span>
+                        <span class="text-[18px]">→</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="flex flex-col">
+                    <p class="font-normal text-[#475569]">
+                      By promoting preventive care, we aim to shift the focus from treating
+                      illness to maintaining wellness. Simple steps like routine health
+                      checks and lifestyle guidance can make a significant difference in
+                      identifying concerns early and avoiding more complex treatments later.
+                      Prevention not only saves time and costs but also leads to better,
+                      sustained well-being.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-5 h-[760px] relative">
+                <div class="w-full h-full rounded-[36px] overflow-hidden shadow-2xl border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1551076805-e1869033e561?auto=format&fit=crop&w=1200&q=80"
+                    alt="Medical consultation with patient in clinical setting"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[36px] pointer-events-none"></div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 7: ENVIRONMENT & 95% SATISFACTION    -->
+        <!-- ========================================== -->
+        <div id="slide-7" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">07 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] grid grid-cols-12 gap-16 items-center">
+              <div class="col-span-7 flex flex-col justify-between h-[740px] pr-4">
+                <div>
+                  <div class="flex items-center gap-6">
+                    <h1 class="text-[76px] font-light leading-[1.08] tracking-[-0.03em] text-[#0a1b3f]">
+                      Clean and <br />
+                      <span class="font-semibold text-[#0d276b]">Healing Environment</span>
+                    </h1>
+                    <span class="text-[52px] font-light text-[#0a1b3f] self-end mb-2">→</span>
+                  </div>
+                  <p class="mt-10 text-[22px] leading-[1.7] text-[#475569] max-w-[820px] font-normal">
+                    Our facilities are designed to promote healing in a calm, hygienic
+                    setting. Clean rooms, quiet areas, and thoughtful layouts help reduce
+                    stress and create an atmosphere where physical recovery can happen
+                    more naturally and comfortably.
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8 pt-6">
+                  <div class="rounded-[28px] bg-[#0a1b3f] text-white p-10 flex flex-col justify-between h-[230px] shadow-sm">
+                    <span class="text-[15px] uppercase tracking-widest text-white/60 font-semibold">
+                      Atmosphere
+                    </span>
+                    <p class="text-[34px] font-medium leading-[1.15] text-white tracking-tight">
+                      A Space <br />
+                      Designed for <br />
+                      Recovery
+                    </p>
+                  </div>
+
+                  <div class="rounded-[28px] bg-white border border-[#e2e8f0] p-10 flex flex-col justify-between h-[230px] shadow-sm">
+                    <span class="text-[15px] uppercase tracking-widest text-[#64748b] font-semibold">
+                      Patient Feedback
+                    </span>
+                    <div>
+                      <h2 class="text-[64px] font-semibold tracking-tight text-[#0d276b] leading-none">
+                        95%
+                      </h2>
+                      <p class="mt-2 text-[20px] font-medium text-[#334155]">
+                        Satisfaction
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-5 h-[740px] relative">
+                <div class="w-full h-full rounded-[36px] overflow-hidden shadow-2xl border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1200&q=80"
+                    alt="Clean and modern healthcare interior with gentle natural lighting"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[36px] pointer-events-none"></div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 8: TELEHEALTH & SUPPORT (80%)        -->
+        <!-- ========================================== -->
+        <div id="slide-8" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">08 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] grid grid-cols-12 gap-16 items-center">
+              <div class="col-span-7 flex flex-col justify-between h-[740px] pr-6">
+                <div>
+                  <h1 class="text-[76px] font-light leading-[1.08] tracking-[-0.03em] text-[#0a1b3f]">
+                    Support Beyond <br />
+                    <span class="font-semibold text-[#0d276b]">the Clinic</span>
+                  </h1>
+                  <p class="mt-10 text-[22px] leading-[1.75] text-[#475569] max-w-[800px] font-normal">
+                    Our care continues even after your visit. With home recovery instructions,
+                    teleconsultation services, and follow-up plans, we ensure you stay
+                    supported at every step—even from the comfort of your home.
+                  </p>
+                </div>
+
+                <div class="w-[360px] rounded-[28px] bg-white border border-[#e2e8f0] p-10 flex flex-col justify-between shadow-sm">
+                  <span class="text-[14px] uppercase tracking-widest text-[#64748b] font-semibold">
+                    Care Continuity
+                  </span>
+                  <div class="mt-4">
+                    <h2 class="text-[64px] font-semibold tracking-tight text-[#0d276b] leading-none">
+                      80%
+                    </h2>
+                    <p class="mt-2 text-[20px] font-medium text-[#334155]">
+                      Confidence
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-span-5 h-[740px] grid grid-rows-2 gap-6">
+                <div class="w-full h-full rounded-[30px] overflow-hidden shadow-lg border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&w=1200&q=80"
+                    alt="Doctor performing an ear examination on a patient"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[30px] pointer-events-none"></div>
+                </div>
+                <div class="w-full h-full rounded-[30px] overflow-hidden shadow-lg border border-[#e2e8f0] relative bg-[#e2e8f0]">
+                  <img
+                    src="https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&w=1200&q=80"
+                    alt="Healthcare assistant supporting patient in recovery"
+                    class="w-full h-full object-cover object-center"
+                  />
+                  <div class="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[30px] pointer-events-none"></div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 9: EDUCATION PILLARS                 -->
+        <!-- ========================================== -->
+        <div id="slide-9" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans bg-[#f7f9fc] text-[#0f172a]"
+            style="width: 1920px; height: 1080px;"
+          >
+            <header class="absolute top-0 left-0 right-0 px-[96px] pt-[72px] flex justify-between items-center z-10">
+              <div class="flex flex-col">
+                <span class="text-[28px] font-semibold tracking-tight text-[#0a1b3f]">
+                  Borcelle Hospital
+                </span>
+                <span class="text-[16px] text-[#55647e] font-normal tracking-wide">
+                  Care at Every Step
+                </span>
+              </div>
+              <div class="flex items-center gap-3 text-[#0a1b3f] text-[16px] font-medium tracking-wide">
+                <span class="text-[#64748b]">09 / 10</span>
+              </div>
+            </header>
+
+            <main class="w-full h-full pt-[170px] pb-[96px] px-[96px] flex flex-col justify-between">
+              <div class="max-w-[1100px]">
+                <h1 class="text-[76px] font-light leading-[1.08] tracking-[-0.03em] text-[#0a1b3f]">
+                  Health Education <br />
+                  <span class="font-semibold text-[#0d276b]">for All</span>
+                </h1>
+              </div>
+
+              <div class="grid grid-cols-3 gap-10 mb-8">
+                <div class="rounded-[32px] bg-white border border-[#e2e8f0] p-12 flex flex-col justify-between h-[420px] shadow-sm">
+                  <div class="w-12 h-12 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[20px] font-light">
+                    ✕
+                  </div>
+                  <p class="text-[24px] leading-[1.65] font-normal text-[#334155] tracking-tight">
+                    We break down complex medical terms into easy language so you fully understand your health and care plan.
+                  </p>
+                  <div class="text-[15px] font-semibold tracking-wider text-[#94a3b8] uppercase">
+                    Pillar 01
+                  </div>
+                </div>
+
+                <div class="rounded-[32px] bg-white border border-[#e2e8f0] p-12 flex flex-col justify-between h-[420px] shadow-sm">
+                  <div class="w-12 h-12 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[20px] font-light">
+                    ✕
+                  </div>
+                  <p class="text-[24px] leading-[1.65] font-normal text-[#334155] tracking-tight">
+                    Health education is adjusted to match your condition, goals, and daily lifestyle, making it more relevant and useful.
+                  </p>
+                  <div class="text-[15px] font-semibold tracking-wider text-[#94a3b8] uppercase">
+                    Pillar 02
+                  </div>
+                </div>
+
+                <div class="rounded-[32px] bg-white border border-[#e2e8f0] p-12 flex flex-col justify-between h-[420px] shadow-sm">
+                  <div class="w-12 h-12 rounded-full border border-[#cbd5e1] flex items-center justify-center text-[#0a1b3f] text-[20px] font-light">
+                    ✕
+                  </div>
+                  <p class="text-[24px] leading-[1.65] font-normal text-[#334155] tracking-tight">
+                    With the right knowledge, you're equipped to make better decisions that support lasting wellness and prevention.
+                  </p>
+                  <div class="text-[15px] font-semibold tracking-wider text-[#94a3b8] uppercase">
+                    Pillar 03
+                  </div>
+                </div>
+              </div>
+            </main>
+
+            <footer class="absolute bottom-6 left-[96px] right-[96px] flex justify-between items-center text-[15px] text-[#94a3b8]">
+              <span>Healthcare Presentation</span>
+              <span>Borcelle • 2025</span>
+            </footer>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- SLIDE 10: OUTRO (THANK YOU)                -->
+        <!-- ========================================== -->
+        <div id="slide-10" class="slide-view">
+          <div
+            class="relative w-full h-full overflow-hidden select-none font-sans text-white"
+            style="
+              width: 1920px;
+              height: 1080px;
+              background:
+                radial-gradient(ellipse 70% 80% at 20% 40%, rgba(20, 60, 160, 0.85) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 60% at 85% 65%, rgba(10, 35, 110, 0.9) 0%, transparent 70%),
+                radial-gradient(ellipse 90% 90% at 50% 90%, rgba(5, 18, 55, 0.95) 0%, transparent 80%),
+                linear-gradient(135deg, #091736 0%, #0d276b 35%, #081a4a 65%, #050d24 100%);
+            "
+          >
+            <svg
+              class="absolute inset-0 w-full h-full pointer-events-none opacity-30"
+              viewBox="0 0 1920 1080"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                d="M-200,600 C300,450 700,900 1300,550 C1700,300 1950,500 2200,400"
+                stroke="url(#silkGlowOutro)"
+                stroke-width="320"
+                stroke-linecap="round"
+                filter="blur(80px)"
+              />
+              <defs>
+                <linearGradient id="silkGlowOutro" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#2b66d6" stop-opacity="0.6" />
+                  <stop offset="50%" stop-color="#1240a8" stop-opacity="0.3" />
+                  <stop offset="100%" stop-color="#0a205a" stop-opacity="0" />
+                </linearGradient>
+              </defs>
+            </svg>
+
+            <div class="relative z-10 w-full h-full flex flex-col justify-between p-[96px]">
+              <div class="flex justify-between items-start">
+                <div class="flex flex-col gap-1">
+                  <h2 class="text-[34px] font-semibold tracking-[-0.01em] text-white/95 leading-tight">
+                    Borcelle Hospital
+                  </h2>
+                  <p class="text-[20px] font-light tracking-wide text-white/70">
+                    Care at Every Step
+                  </p>
+                </div>
+                <div class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white/80 backdrop-blur-sm">
+                  <span class="text-[22px] leading-none mb-0.5">→</span>
+                </div>
+              </div>
+
+              <div class="flex flex-col -mt-8">
+                <div class="overflow-hidden">
+                  <h1 class="text-[128px] font-medium tracking-[-0.035em] leading-[0.95] text-white">
+                    Thank
+                  </h1>
+                </div>
+                <div class="overflow-hidden">
+                  <h1 class="text-[128px] font-medium tracking-[-0.035em] leading-[0.95] text-white/90">
+                    You
+                  </h1>
+                </div>
+                <p class="mt-8 text-[26px] font-normal tracking-wide text-white/75">
+                  Compassionate Care at Every Step
+                </p>
+              </div>
+
+              <div class="flex justify-between items-end border-t border-white/15 pt-8 text-[18px] tracking-wide text-white/70">
+                <div class="flex items-center gap-6">
+                  <span class="font-semibold text-white/90">Borcelle</span>
+                  <span class="w-1 h-1 rounded-full bg-white/40"></span>
+                  <span>2025</span>
+                </div>
+                <div>
+                  <span class="text-white/60 font-medium">Healthcare Presentation</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 10;
+
+    function updateScale() {
+      const container = document.getElementById('container');
+      const slide = document.getElementById('slideFrame');
+      const containerWidth = container.clientWidth;
+      const scale = containerWidth / 1920;
+      slide.style.transform = `scale(${scale})`;
+    }
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+      currentSlide = index;
+
+      for (let i = 1; i <= totalSlides; i++) {
+        const el = document.getElementById(`slide-${i}`);
+        if (el) el.classList.remove('active');
+      }
+      const target = document.getElementById(`slide-${index}`);
+      if (target) target.classList.add('active');
+
+      const tabs = document.querySelectorAll('#tabsBar .nav-btn');
+      tabs.forEach((tab, idx) => {
+        if (idx + 1 === index) {
+          tab.classList.add('active');
+        } else {
+          tab.classList.remove('active');
+        }
+      });
+
+      document.getElementById('slideCounter').textContent = `${index} / ${totalSlides}`;
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) showSlide(currentSlide + 1);
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) showSlide(currentSlide - 1);
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === 'Space') nextSlide();
+      if (e.key === 'ArrowLeft') prevSlide();
+    });
+
+    window.addEventListener('resize', updateScale);
+    updateScale();
+  </script>
+</body>
+</html>

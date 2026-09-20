@@ -154,6 +154,7 @@ function normalizeManifest(raw: any, presId: string, templateId: string): any {
       'title',
       'two-column',
       'card-grid',
+      'stat-highlight',
       'bullet-list',
       'stat-chart',
       'image-content',
@@ -233,7 +234,7 @@ export class GroqProvider implements ILLMProvider {
     prompt: string,
     options?: ScriptGenerationOptions
   ): Promise<PresentationManifest> {
-    const templateId = options?.templateId || 'healthcare-modern-blue';
+    const templateId = options?.templateId || 'healthcare-borcelle-new';
     const targetSlideCount = options?.targetSlideCount || 5;
     const presId = `pres-${Date.now()}`;
 

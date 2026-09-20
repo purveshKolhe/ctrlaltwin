@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Slide 1 Preview - Borcelle Medical Presentation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #030712;
+      color: #f8fafc;
+      margin: 0;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .viewport-container {
+      width: 100%;
+      max-width: 1280px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #1e293b;
+    }
+    .slide-aspect-ratio {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%; /* 16:9 ratio */
+      overflow: hidden;
+    }
+    .slide-scaler {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 1920px;
+      height: 1080px;
+      transform-origin: top left;
+    }
+  </style>
+</head>
+<body>
+  <div style="width: 100%; max-width: 1280px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+    <div>
+      <h1 style="font-size: 20px; font-weight: 700; margin: 0; color: #38bdf8;">Slide 1 Live Preview (Cover / Title)</h1>
+      <p style="font-size: 14px; color: #94a3b8; margin: 4px 0 0 0;">Native 1920x1080 canvas scaled dynamically to your browser screen</p>
+    </div>
+    <div style="display: flex; gap: 12px;">
+      <a href="/index.html" style="background: #1e293b; color: #94a3b8; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500;">← Back to App</a>
+      <button onclick="window.location.reload()" style="background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer;">Refresh Preview</button>
+    </div>
+  </div>
+
+  <div class="viewport-container" id="container">
+    <div class="slide-aspect-ratio">
+      <div class="slide-scaler" id="slideFrame">
+        <!-- EXACT SLIDE 1 CODE -->
+        <div
+          class="relative w-full h-full overflow-hidden select-none font-sans text-white"
+          style="
+            width: 1920px;
+            height: 1080px;
+            background:
+              radial-gradient(ellipse 70% 80% at 20% 40%, rgba(20, 60, 160, 0.85) 0%, transparent 70%),
+              radial-gradient(ellipse 60% 60% at 85% 65%, rgba(10, 35, 110, 0.9) 0%, transparent 70%),
+              radial-gradient(ellipse 90% 90% at 50% 90%, rgba(5, 18, 55, 0.95) 0%, transparent 80%),
+              linear-gradient(135deg, #091736 0%, #0d276b 35%, #081a4a 65%, #050d24 100%);
+          "
+        >
+          <!-- Subtle organic silk wave overlay -->
+          <svg
+            class="absolute inset-0 w-full h-full pointer-events-none opacity-30"
+            viewBox="0 0 1920 1080"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M-200,600 C300,450 700,900 1300,550 C1700,300 1950,500 2200,400"
+              stroke="url(#silkGlow)"
+              stroke-width="320"
+              stroke-linecap="round"
+              filter="blur(80px)"
+            />
+            <defs>
+              <linearGradient id="silkGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stop-color="#2b66d6" stop-opacity="0.6" />
+                <stop offset="50%" stop-color="#1240a8" stop-opacity="0.3" />
+                <stop offset="100%" stop-color="#0a205a" stop-opacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+
+          <!-- Main Container -->
+          <div class="relative z-10 w-full h-full flex flex-col justify-between p-[96px]">
+            <!-- Top Header: Brand & Tagline -->
+            <div class="flex justify-between items-start">
+              <div class="flex flex-col gap-1">
+                <h2 class="text-[34px] font-semibold tracking-[-0.01em] text-white/95 leading-tight">
+                  Borcelle Hospital
+                </h2>
+                <p class="text-[20px] font-light tracking-wide text-white/70">
+                  Care at Every Step
+                </p>
+              </div>
+
+              <!-- Minimalist Arrow / Icon badge -->
+              <div class="w-12 h-12 rounded-full border border-white/20 flex items-center justify-center text-white/80 backdrop-blur-sm">
+                <span class="text-[22px] leading-none mb-0.5">→</span>
+              </div>
+            </div>
+
+            <!-- Center: Main Title Block -->
+            <div class="flex flex-col -mt-8">
+              <div class="overflow-hidden">
+                <h1 class="text-[128px] font-medium tracking-[-0.035em] leading-[0.95] text-white">
+                  Medical
+                </h1>
+              </div>
+              <div class="overflow-hidden">
+                <h1 class="text-[128px] font-medium tracking-[-0.035em] leading-[0.95] text-white/90">
+                  Presentation
+                </h1>
+              </div>
+              <p class="mt-8 text-[26px] font-normal tracking-wide text-white/75">
+                Compassionate Care at Every Step
+              </p>
+            </div>
+
+            <!-- Footer: Metadata & Category -->
+            <div class="flex justify-between items-end border-t border-white/15 pt-8 text-[18px] tracking-wide text-white/70">
+              <div class="flex items-center gap-6">
+                <span class="font-semibold text-white/90">Borcelle</span>
+                <span class="w-1 h-1 rounded-full bg-white/40"></span>
+                <span>2025</span>
+              </div>
+
+              <div>
+                <span class="text-white/60 font-medium">Healthcare Presentation</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- END OF SLIDE 1 CODE -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateScale() {
+      const container = document.getElementById('container');
+      const slide = document.getElementById('slideFrame');
+      const containerWidth = container.clientWidth;
+      const scale = containerWidth / 1920;
+      slide.style.transform = `scale(${scale})`;
+    }
+    window.addEventListener('resize', updateScale);
+    updateScale();
+  </script>
+</body>
+</html>

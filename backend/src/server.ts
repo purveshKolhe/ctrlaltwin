@@ -71,7 +71,7 @@ app.post(
   async (req: Request, res: Response) => {
     try {
       const prompt = req.body?.prompt || '';
-      const templateId = req.body?.templateId || 'tech-modern-dark';
+      const templateId = req.body?.templateId || 'healthcare-borcelle-new';
       const pdfPath = req.file ? req.file.path : undefined;
 
       if (!prompt.trim() && !pdfPath) {

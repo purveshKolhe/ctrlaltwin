@@ -5,6 +5,7 @@ export const SlideTypeEnum = z.enum([
   'title',
   'two-column',
   'card-grid',
+  'stat-highlight',
   'bullet-list',
   'stat-chart',
   'image-content',
