@@ -7,19 +7,19 @@
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 800px;
+      max-width: 860px;
       margin: 40px auto;
       padding: 0 20px;
-      background: #0f172a;
+      background: #0b1329;
       color: #f8fafc;
     }
     h1 { margin-bottom: 8px; color: #38bdf8; }
     p.sub { color: #94a3b8; margin-top: 0; margin-bottom: 28px; }
     .card {
-      background: #1e293b;
+      background: #152238;
       padding: 24px;
-      border-radius: 12px;
-      border: 1px solid #334155;
+      border-radius: 14px;
+      border: 1px solid #233554;
       margin-bottom: 24px;
     }
     label {
@@ -32,8 +32,8 @@
       width: 100%;
       padding: 12px;
       border-radius: 8px;
-      border: 1px solid #475569;
-      background: #0f172a;
+      border: 1px solid #334155;
+      background: #091124;
       color: #f8fafc;
       box-sizing: border-box;
       margin-bottom: 16px;
@@ -52,13 +52,13 @@
       transition: background 0.2s;
     }
     button:hover { background: #0369a1; }
-    button:disabled { background: #475569; cursor: not-allowed; }
+    button:disabled { background: #334155; cursor: not-allowed; }
     .progress-box {
       display: none;
       margin-top: 20px;
     }
     .progress-bar-bg {
-      background: #334155;
+      background: #233554;
       height: 16px;
       border-radius: 8px;
       overflow: hidden;
@@ -68,15 +68,29 @@
       background: #38bdf8;
       height: 100%;
       width: 0%;
-      transition: width 0.4s ease;
+      transition: width 0.3s ease;
     }
     .status-text {
       font-weight: 600;
       color: #38bdf8;
     }
+    .terminal {
+      background: #060b18;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 13px;
+      color: #93c5fd;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.5;
+      margin-top: 14px;
+    }
     video {
       width: 100%;
-      border-radius: 8px;
+      border-radius: 10px;
       margin-top: 16px;
       background: #000;
     }
@@ -96,37 +110,44 @@
 <body>
 
   <h1>Presenter Video Generator</h1>
-  <p class="sub">Enter a topic prompt or upload a visual PDF to generate an animated video with voiceover.</p>
+  <p class="sub">Enter a topic prompt or upload a PDF to generate an animated video with voiceover.</p>
 
   <div class="card">
     <label for="prompt">Topic / Instructions</label>
-    <textarea id="prompt" rows="3" placeholder="e.g. Overview of Quantum Computing architectures and comparison with classical bits"></textarea>
+    <textarea id="prompt" rows="3" placeholder="e.g. Overview of patient-centered healthcare and preventive medical screenings"></textarea>
 
-    <label for="pdf">Attach Visual PDF (Optional - Gemini reads visually)</label>
+    <label for="pdf">Attach Visual PDF (Optional - e.g. templates/Blue Modern Healthcare Medical Presentation.pdf)</label>
     <input type="file" id="pdf" accept="application/pdf">
 
     <label for="template">Template Theme</label>
     <select id="template">
+      <option value="healthcare-modern-blue" selected>Healthcare Modern Blue (Clean Light - Borcelle PDF)</option>
       <option value="tech-modern-dark">Tech Modern Dark</option>
-      <option value="corporate-clean">Corporate Clean</option>
-      <option value="cyber-gradient">Cyber Gradient</option>
+      <option value="corporate-clean">Corporate Clean (Light)</option>
+      <option value="cyber-gradient">Cyber Gradient (Dark)</option>
     </select>
 
     <button id="submitBtn" onclick="generatePresentation()">Generate Presentation Video</button>
 
     <div class="progress-box" id="progressBox">
-      <div style="display: flex; justify-content: space-between;">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
         <span class="status-text" id="statusText">Starting pipeline...</span>
-        <span id="percentText">0%</span>
+        <span id="percentText" style="font-weight: 700;">0%</span>
       </div>
       <div class="progress-bar-bg">
         <div class="progress-bar-fill" id="progressFill"></div>
       </div>
+
+      <div style="margin-top: 12px; display: flex; justify-content: space-between; font-size: 13px; color: #94a3b8;">
+        <span>Live Backend Execution Logs:</span>
+        <a id="rawLogLink" href="#" target="_blank" style="color: #38bdf8; text-decoration: none;">View Raw Logs</a>
+      </div>
+      <div class="terminal" id="terminalLogs">Waiting for logs...</div>
     </div>
   </div>
 
   <div class="card" id="resultCard" style="display: none;">
-    <h3>Generated Presenter Video</h3>
+    <h3 style="margin-top: 0; color: #38bdf8;">Generated Presenter Video</h3>
     <video id="videoPlayer" controls></video>
     <a id="downloadBtn" class="download-btn" href="#" download>Download MP4 Video</a>
   </div>
@@ -141,6 +162,7 @@
       const submitBtn = document.getElementById('submitBtn');
       const progressBox = document.getElementById('progressBox');
       const resultCard = document.getElementById('resultCard');
+      const terminalLogs = document.getElementById('terminalLogs');
 
       if (!prompt && (!pdfInput.files || pdfInput.files.length === 0)) {
         alert('Please enter a prompt or select a PDF file.');
@@ -150,6 +172,7 @@
       submitBtn.disabled = true;
       progressBox.style.display = 'block';
       resultCard.style.display = 'none';
+      terminalLogs.textContent = '🚀 Submitting presentation request to backend...';
 
       const formData = new FormData();
       if (prompt) formData.append('prompt', prompt);
@@ -166,6 +189,7 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Failed to start generation');
 
+        document.getElementById('rawLogLink').href = `/api/presentations/${data.jobId}/logs`;
         pollJob(data.jobId);
       } catch (err) {
         alert(err.message);
@@ -182,6 +206,7 @@
       const resultCard = document.getElementById('resultCard');
       const videoPlayer = document.getElementById('videoPlayer');
       const downloadBtn = document.getElementById('downloadBtn');
+      const terminalLogs = document.getElementById('terminalLogs');
 
       pollInterval = setInterval(async () => {
         try {
@@ -190,10 +215,10 @@
 
           const stages = {
             'pending': 'Queued...',
-            'orchestrating': 'Analyzing content & creating slides...',
-            'generating_assets': 'Generating voiceovers & visuals...',
+            'orchestrating': 'Analyzing content & generating script...',
+            'generating_assets': 'Synthesizing voiceovers & visual assets...',
             'syncing': 'Synchronizing audio-video timeline...',
-            'rendering': 'Rendering final video with Remotion...',
+            'rendering': 'Rendering MP4 with Remotion...',
             'completed': 'Rendering Complete!',
             'failed': 'Failed: ' + (job.error || 'Unknown error'),
           };
@@ -201,6 +226,12 @@
           statusText.textContent = stages[job.status] || job.status;
           percentText.textContent = `${job.progress}%`;
           progressFill.style.width = `${job.progress}%`;
+
+          // Live terminal logs
+          if (job.logs && job.logs.length > 0) {
+            terminalLogs.textContent = job.logs.join('\n');
+            terminalLogs.scrollTop = terminalLogs.scrollHeight;
+          }
 
           if (job.status === 'completed') {
             clearInterval(pollInterval);
@@ -216,7 +247,7 @@
         } catch (err) {
           console.error(err);
         }
-      }, 1500);
+      }, 1000);
     }
   </script>
 

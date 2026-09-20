@@ -88,6 +88,7 @@ app.post(
         templateId,
         status: 'pending',
         progress: 0,
+        logs: [],
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -116,7 +117,7 @@ app.post(
   }
 );
 
-// Get job status and details
+// Get job status, details, and live logs
 app.get('/api/presentations/:id', (req: Request, res: Response) => {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const job = jobs.get(id);
@@ -133,9 +134,23 @@ app.get('/api/presentations/:id', (req: Request, res: Response) => {
     manifest: job.manifest,
     hasVideo: !!job.videoPath && fs.existsSync(job.videoPath),
     error: job.error,
+    logs: job.logs || [],
+    metrics: job.metrics || {},
     createdAt: job.createdAt,
     updatedAt: job.updatedAt,
   });
+});
+
+// Get raw plaintext backend logs for a job
+app.get('/api/presentations/:id/logs', (req: Request, res: Response) => {
+  const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const job = jobs.get(id);
+  if (!job) {
+    return res.status(404).send('Job not found');
+  }
+
+  res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+  res.send((job.logs || []).join('\n'));
 });
 
 // Download / stream rendered video

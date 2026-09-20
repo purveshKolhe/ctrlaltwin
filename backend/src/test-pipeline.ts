@@ -13,10 +13,11 @@ async function runTest() {
 
   const job: GenerationJob = {
     id: `test-${Date.now()}`,
-    prompt: 'Autonomous AI Agents & Remotion Video Synthesis',
-    templateId: 'tech-modern-dark',
+    prompt: 'Minimally Invasive Robotic Surgery and Precision Medicine',
+    templateId: 'healthcare-modern-blue',
     status: 'pending',
     progress: 0,
+    logs: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };
