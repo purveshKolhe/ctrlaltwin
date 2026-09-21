@@ -74,9 +74,14 @@ describe('post-confirmation handler', () => {
     expect(UpdateCommand).toHaveBeenCalledTimes(1);
     const updateArgs = (UpdateCommand as any).mock.calls[0][0];
 
-    // Verify it uses if_not_exists for createdAt and role
+    // Verify it uses if_not_exists for createdAt, role, userId, authProvider, username
     expect(updateArgs.UpdateExpression).toContain('#createdAt = if_not_exists(#createdAt, :createdAt)');
     expect(updateArgs.UpdateExpression).toContain('#role = if_not_exists(#role, :role)');
+    expect(updateArgs.UpdateExpression).not.toContain("#userId");
+    expect(updateArgs.ExpressionAttributeNames?.["#userId"]).toBeUndefined();
+    expect(updateArgs.ExpressionAttributeValues?.[":userId"]).toBeUndefined();
+    expect(updateArgs.UpdateExpression).toContain('#authProvider = if_not_exists(#authProvider, :authProvider)');
+    expect(updateArgs.UpdateExpression).toContain('#username = if_not_exists(#username, :username)');
   });
 
   it('creates profile for AdminConfirmSignUp', async () => {

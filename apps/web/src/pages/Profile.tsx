@@ -49,9 +49,12 @@ export default function Profile() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-color)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
               <span style={{ display: 'block', fontSize: '0.875rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                Username / Email
+                Display Name
               </span>
-              <strong style={{ fontSize: '1.125rem' }}>{user?.username || 'Unknown'}</strong>
+              <strong style={{ fontSize: '1.125rem' }}>{user?.displayName || user?.username || 'Unknown'}</strong>
+              <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+                Username / ID: {user?.username || 'Unknown'}
+              </div>
             </div>
             
             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-color)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
